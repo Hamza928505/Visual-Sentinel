@@ -1,0 +1,7 @@
+path: C:\Users\حمزة\PycharmProjects\KAFD\.venv\DroneDatasetSnippet
+train: Train\Drone_TrainSet_100Snippet
+val: Test\Drone_TestSet_100Snippet
+
+nc: 1
+names:
+  - drone
