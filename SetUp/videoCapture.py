@@ -1,103 +1,21 @@
 import subprocess
-import datetime
 import os
 import tkinter as tk
 import sys
 import re
 from tkinter import simpledialog, messagebox
 
-# --- FFmpeg Settings ---
-DEFAULT_DURATION_SECONDS = 20
+# ---------------- CONFIG ----------------
+DURATION_SECONDS = 20
 DEFAULT_FILENAME = "EXP-000 B5 F18 D20 H20"
-CAMERA_DEVICE = "/dev/video0" 
+CAMERA_DEVICE = "/dev/video0"
 
-def check_video_signal(device_path):
-    """
-    Analyzes the video feed to ensure it's not just a black screen.
-    Uses 'signalstats' to get brightness (YAVG).
-    """
-    print(f"Analyzing video signal on {device_path}...")
-    
-    # This command captures 1 frame and prints video statistics to STDOUT
-    # lavfi.signalstats.YAVG = Average Luma (Brightness) [0-255]
-    command = [
-        "ffmpeg",
-        "-f", "v4l2",
-        "-i", device_path,
-        "-frames:v", "1",                    # Analyze only 1 frame
-        "-vf", "signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-", 
-        "-f", "null", "-",                   # Don't save a file, just output data
-        "-v", "error"                        # Hide normal logs
-    ]
+IMU_SOURCE = "/var/log/imu/ypr.jsonl"
+GPS_SOURCE = "/var/log/gps/gps.jsonl"
+# ---------------------------------------
 
-    try:
-        result = subprocess.run(
-            command, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True, 
-            timeout=8 
-        )
-
-        output = result.stdout
-        
-        # Parse YAVG (Average Brightness) using Regex
-        yavg_match = re.search(r"lavfi.signalstats.YAVG=([\d\.]+)", output)
-
-        if yavg_match:
-            yavg = float(yavg_match.group(1))
-            
-            # Fixed Syntax Error: avoiding backslashes inside f-strings
-            print("Signal Brightness (YAVG): " + str(yavg))
-
-            # CONDITION: Is it too dark? (Black screen / Lens cap)
-            # A completely black screen (no signal) usually has YAVG < 16.
-            if yavg < 20: 
-                print("FAIL: Image is too dark (Black screen detected).")
-                return False
-            
-            return True
-        else:
-            print("FAIL: Could not parse video statistics.")
-            return False
-
-    except subprocess.TimeoutExpired:
-        print("FAIL: Camera timed out (Device unresponsive).")
-        return False
-    except Exception as e:
-        print("FAIL: Signal check error: " + str(e))
-        return False
-        
-def run_ffmpeg_recording(output_path, duration_seconds):
-    """Constructs and runs the FFmpeg command (Linux version)."""
-
-    command = [
-        "ffmpeg",
-        "-f", "v4l2",
-        "-framerate", "25",
-        "-video_size", "1920x1080",
-        "-i", CAMERA_DEVICE,
-        "-t", str(duration_seconds),
-        "-vf", "showinfo",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-pix_fmt", "yuv420p",
-        output_path
-    ]
-
-    print(f"Recording started... Duration: {duration_seconds}s. Saving to {output_path}")
-    try:
-        subprocess.run(command, check=True)
-        messagebox.showinfo("Success", f"Recording finished and saved to:\n{output_path}")
-    except subprocess.CalledProcessError as e:
-        messagebox.showerror("Error", f"FFmpeg failed with exit code {e.returncode}.\nCheck console for details.")
-    except FileNotFoundError:
-        messagebox.showerror("Error", "FFmpeg not found.\nPlease ensure FFmpeg is installed.")
-    except Exception as e:
-        messagebox.showerror("Error", f"An unexpected error occurred: {e}")
 
 def usb_camera_connected():
-    """Check if any USB capture card is connected using lsusb."""
     try:
         result = subprocess.run(
             ["lsusb"],
@@ -105,78 +23,138 @@ def usb_camera_connected():
             stderr=subprocess.DEVNULL,
             text=True
         )
-        output = result.stdout.lower()
-        # Add keywords for your specific capture card
-        camera_keywords = ["Elgato", "Cam Link", "Video Capture", "HDMI"] 
-        
-        for keyword in camera_keywords:
-            if keyword.lower() in output:
-                print("[USB Check] Capture card detected: " + keyword)
+
+        for k in ["elgato", "cam link", "video capture", "hdmi"]:
+            if k in result.stdout.lower():
                 return True
+        return False
+    except Exception:
+        return False
 
-        print("[USB Check] No Capture card detected via lsusb.")
-        return False
-    except Exception as e:
-        print("[USB Check] lsusb failed: " + str(e))
-        return False
-        
-def record(provided_id=None):
-    """Handles the Tkinter GUI logic for file selection and recording."""
-    
-    # --- 1. Hardware Check (Is the USB dongle plugged in?) ---
-    if not usb_camera_connected():
-        messagebox.showerror("Connection Error", "Capture Card not found in USB ports.")
-        return
-    
-    # --- 2. Signal Check (Is the HDMI actually sending video?) ---
-    if not check_video_signal(CAMERA_DEVICE):
-        response = messagebox.askyesno(
-            "No Video Signal", 
-            "The camera seems to be showing a BLACK SCREEN.\n\n"
-            "1. Is the HDMI connected?\n"
-            "2. Is the Camera turned ON?\n"
-            "3. Is the Lens Cap off?\n\n"
-            "Do you want to record anyway?"
+
+def check_video_signal(device_path):
+    command = [
+        "ffmpeg",
+        "-f", "v4l2",
+        "-i", device_path,
+        "-frames:v", "1",
+        "-vf", "signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-",
+        "-f", "null", "-",
+        "-v", "error"
+    ]
+
+    try:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=8
         )
-        if not response:
-            return # Stop if user clicks No
 
-    save_dir = os.getcwd()
+        match = re.search(r"lavfi.signalstats.YAVG=([\d\.]+)", result.stdout)
+        return bool(match)
 
-    # --- 3. Determine Filename ---
+    except Exception:
+        return False
+
+
+def start_sensor_capture(source_file, output_file, duration):
+    """
+    Runs:
+    timeout <duration>s stdbuf -oL tail -n 0 -F source_file
+    Writes output to output_file in real time
+    """
+    command = [
+        "timeout", f"{duration}s",
+        "stdbuf", "-oL",
+        "tail", "-n", "0", "-F", source_file
+    ]
+
+    f = open(output_file, "w")
+    proc = subprocess.Popen(command, stdout=f, stderr=subprocess.DEVNULL)
+    return proc, f
+
+
+def record_video(output_path, duration):
+    command = [
+        "ffmpeg",
+        "-f", "v4l2",
+        "-framerate", "25",
+        "-video_size", "1920x1080",
+        "-i", CAMERA_DEVICE,
+        "-t", str(duration),
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-pix_fmt", "yuv420p",
+        output_path
+    ]
+    subprocess.run(command, check=True)
+
+
+def record(provided_id=None):
+    if not usb_camera_connected():
+        messagebox.showerror("Error", "Capture card not detected.")
+        return
+
+    if not check_video_signal(CAMERA_DEVICE):
+        if not messagebox.askyesno("Warning", "No video signal detected.\nRecord anyway?"):
+            return
+
     if provided_id:
-        filename_base = provided_id
-        print(f"Using provided Test ID: {filename_base}")
+        base = provided_id
     else:
-        filename_base = simpledialog.askstring(
+        base = simpledialog.askstring(
             "Filename",
-            "Enter the Test ID (e.g., EEXP-000 B5 F18 D20 H20):",
+            "Enter Test ID:",
             initialvalue=DEFAULT_FILENAME
         )
-    
-    if not filename_base:
-        return 
 
-    # --- 4. Construct final filename (NO DATE) ---
-    # I removed the datetime logic here
-    final_filename = f"{filename_base}.mp4"
-    output_path = os.path.join(save_dir, final_filename)
+    if not base:
+        return
 
-    # --- 5. Run recording ---
-    run_ffmpeg_recording(output_path, DEFAULT_DURATION_SECONDS)
-    
+    cwd = os.getcwd()
+    video_path = os.path.abspath(f"{cwd}/{base}.mp4")
+    imu_out = os.path.abspath(f"{cwd}/{base}_imu.jsonl")
+    gps_out = os.path.abspath(f"{cwd}/{base}_gps.jsonl")
 
+    print("Starting IMU & GPS capture...")
+    imu_proc, imu_file = start_sensor_capture(IMU_SOURCE, imu_out, DURATION_SECONDS)
+    gps_proc, gps_file = start_sensor_capture(GPS_SOURCE, gps_out, DURATION_SECONDS)
+
+    print("Recording video...")
+    record_video(video_path, DURATION_SECONDS)
+
+    # Wait for sensor capture to finish
+    imu_proc.wait()
+    imu_file.close()
+    gps_proc.wait()
+    gps_file.close()
+
+    print("\n===== FILE LOCATIONS =====")
+    print("Video:", video_path)
+    print("IMU  :", imu_out)
+    print("GPS  :", gps_out)
+    print("==========================\n")
+
+    messagebox.showinfo(
+        "Success",
+        f"Files saved:\n\n"
+        f"Video:\n{video_path}\n\n"
+        f"IMU:\n{imu_out}\n\n"
+        f"GPS:\n{gps_out}"
+    )
+
+
+# ---------------- MAIN ----------------
 if __name__ == "__main__":
     root = tk.Tk()
     root.withdraw()
 
     try:
-        # Check command line arguments
         if len(sys.argv) > 1:
-            input_id = sys.argv[1]
-            record(input_id)
+            record(sys.argv[1])
         else:
-            record() 
-            
+            record()
     except Exception as e:
-        messagebox.showerror("Initialization Error", str(e))
+        messagebox.showerror("Fatal Error", str(e))
