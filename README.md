@@ -1,6 +1,6 @@
 # For KAFD_CLI
 
-move the file to /home/<username>/Desktop/KAFD
+move the file to /home/username/Desktop/KAFD
 
 # KAFD-private
 
