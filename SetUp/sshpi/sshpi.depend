@@ -1,9 +1,0 @@
-# depslib dependency file v1.0
-1765807850 source:/home/kali/Desktop/C Codes/sshpi/main.c
-	<stdio.h>
-	<stdlib.h>
-	<unistd.h>
-	<sys/wait.h>
-	<time.h>
-	<string.h>
-
