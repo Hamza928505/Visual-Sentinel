@@ -1,0 +1,97 @@
+# depslib dependency file v1.0
+1766836972 source:/home/kali/Desktop/C Codes/KAFD_CLI/main.c
+	"KAFD_COMMON.h"
+	"KAFD_UTILS.h"
+	"KADF_GLOBALS.h"
+	"KAFD_STRUCTS.h"
+	"KAFD_PATHS.h"
+
+1766599684 source:/home/kali/Desktop/C Codes/KAFD_CLI/KADFCLI.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
+1766833294 source:/home/kali/Desktop/C Codes/Network/updateNetwork.c
+	"../../KAFD/include/KAFD_COMMON.h"
+	"../../KAFD/include/KADF_GLOBALS.h"
+	"../../KAFD/include/KAFD_STRUCTS.h"
+	"../../KAFD/include/KAFD_PATHS.h"
+
+1766833546 source:/home/kali/Desktop/C Codes/PI_Config/piConfig.c
+	"../../KAFD/include/KAFD_COMMON.h"
+	"../../KAFD/include/KADF_GLOBALS.h"
+	"../../KAFD/include/KAFD_STRUCTS.h"
+	"../../KAFD/include/KAFD_PATHS.h"
+
+1766832837 source:/home/kali/Desktop/C Codes/sshpi/record.c
+	"../../KAFD/include/KAFD_COMMON.h"
+	"../../KAFD/include/KADF_GLOBALS.h"
+	"../../KAFD/include/KAFD_STRUCTS.h"
+	"../../KAFD/include/KAFD_PATHS.h"
+
+1766810316 source:/home/kali/Desktop/C Codes/addNetwork/addNetwork.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
+1766830523 /home/kali/Desktop/KAFD/include/KAFD_COMMON.h
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<stdbool.h>
+	<unistd.h>
+	<sys/stat.h>
+	<sys/types.h>
+	<sys/wait.h>
+	<errno.h>
+	<time.h>
+	<fcntl.h>
+
+1766832498 /home/kali/Desktop/KAFD/include/KADF_GLOBALS.h
+
+1766832652 /home/kali/Desktop/KAFD/include/KAFD_STRUCTS.h
+
+1766833026 /home/kali/Desktop/KAFD/include/KAFD_PATHS.h
+
+1766830523 /home/kali/Desktop/C Codes/KAFD_CLI/KAFD_COMMON.h
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<stdbool.h>
+	<unistd.h>
+	<sys/stat.h>
+	<sys/types.h>
+	<sys/wait.h>
+	<errno.h>
+	<time.h>
+	<fcntl.h>
+
+1766830653 /home/kali/Desktop/C Codes/KAFD_CLI/KAFD_UTILS.h
+
+1766832498 /home/kali/Desktop/C Codes/KAFD_CLI/KADF_GLOBALS.h
+
+1766832652 /home/kali/Desktop/C Codes/KAFD_CLI/KAFD_STRUCTS.h
+
+1766837057 /home/kali/Desktop/C Codes/KAFD_CLI/KAFD_PATHS.h
+
+1766837188 source:/home/kali/Desktop/C Codes/KAFD_CLI/piConfig.c
+	"KAFD_COMMON.h"
+	"KAFD_UTILS.h"
+	"KADF_GLOBALS.h"
+	"KAFD_STRUCTS.h"
+	"KAFD_PATHS.h"
+
+1766837201 source:/home/kali/Desktop/C Codes/KAFD_CLI/record.c
+	"KAFD_COMMON.h"
+	"KAFD_UTILS.h"
+	"KADF_GLOBALS.h"
+	"KAFD_STRUCTS.h"
+	"KAFD_PATHS.h"
+
+1766837527 source:/home/kali/Desktop/C Codes/KAFD_CLI/updateNetwork.c
+	"KAFD_COMMON.h"
+	"KAFD_UTILS.h"
+	"KADF_GLOBALS.h"
+	"KAFD_STRUCTS.h"
+	"KAFD_PATHS.h"
+
