@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1766836972 source:/home/kali/Desktop/C Codes/KAFD_CLI/main.c
+1766841687 source:/home/kali/Desktop/C Codes/KAFD_CLI/main.c
 	"KAFD_COMMON.h"
 	"KAFD_UTILS.h"
 	"KADF_GLOBALS.h"
@@ -72,7 +72,7 @@
 
 1766832652 /home/kali/Desktop/C Codes/KAFD_CLI/KAFD_STRUCTS.h
 
-1766837057 /home/kali/Desktop/C Codes/KAFD_CLI/KAFD_PATHS.h
+1766841606 /home/kali/Desktop/C Codes/KAFD_CLI/KAFD_PATHS.h
 
 1766837188 source:/home/kali/Desktop/C Codes/KAFD_CLI/piConfig.c
 	"KAFD_COMMON.h"
@@ -81,7 +81,7 @@
 	"KAFD_STRUCTS.h"
 	"KAFD_PATHS.h"
 
-1766837201 source:/home/kali/Desktop/C Codes/KAFD_CLI/record.c
+1766840214 source:/home/kali/Desktop/C Codes/KAFD_CLI/record.c
 	"KAFD_COMMON.h"
 	"KAFD_UTILS.h"
 	"KADF_GLOBALS.h"

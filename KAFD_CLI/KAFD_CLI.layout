@@ -2,59 +2,19 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
-	<File name="../sshpi/record.c" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="updateNetwork.c" open="1" top="1" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="5313" topLine="10" />
+			<Cursor1 position="2253" topLine="83" />
 		</Cursor>
-		<Folding>
-			<Collapse line="27" />
-			<Collapse line="46" />
-			<Collapse line="53" />
-			<Collapse line="64" />
-			<Collapse line="77" />
-			<Collapse line="93" />
-			<Collapse line="115" />
-			<Collapse line="139" />
-		</Folding>
 	</File>
-	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="KAFD_PATHS.h" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="696" topLine="21" />
+			<Cursor1 position="142" topLine="0" />
 		</Cursor>
-		<Folding>
-			<Collapse line="97" />
-		</Folding>
 	</File>
-	<File name="../PI_Config/piConfig.c" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+	<File name="main.c" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="1716" topLine="0" />
+			<Cursor1 position="0" topLine="0" />
 		</Cursor>
-		<Folding>
-			<Collapse line="8" />
-			<Collapse line="14" />
-			<Collapse line="36" />
-			<Collapse line="61" />
-		</Folding>
-	</File>
-	<File name="../Network/updateNetwork.c" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="334" topLine="30" />
-		</Cursor>
-		<Folding>
-			<Collapse line="18" />
-			<Collapse line="27" />
-			<Collapse line="42" />
-			<Collapse line="53" />
-			<Collapse line="62" />
-			<Collapse line="69" />
-			<Collapse line="105" />
-			<Collapse line="129" />
-			<Collapse line="157" />
-			<Collapse line="166" />
-			<Collapse line="176" />
-			<Collapse line="265" />
-			<Collapse line="352" />
-			<Collapse line="422" />
-		</Folding>
 	</File>
 </CodeBlocks_layout_file>

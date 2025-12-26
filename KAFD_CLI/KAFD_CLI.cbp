@@ -31,18 +31,23 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="../../KAFD/IPAdress.txt" />
-		<Unit filename="../../KAFD/NetworksFile.txt" />
-		<Unit filename="../Network/updateNetwork.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="../PI_Config/piConfig.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="../sshpi/record.c">
-			<Option compilerVar="CC" />
-		</Unit>
+		<Unit filename="IPAdress.txt" />
+		<Unit filename="KADF_GLOBALS.h" />
+		<Unit filename="KAFD_COMMON.h" />
+		<Unit filename="KAFD_PATHS.h" />
+		<Unit filename="KAFD_STRUCTS.h" />
+		<Unit filename="KAFD_UTILS.h" />
+		<Unit filename="NetworksFile.txt" />
 		<Unit filename="main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="piConfig.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="record.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="updateNetwork.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions />

@@ -13,10 +13,10 @@ int deleteNetwork();
 int addNetwork();
 int modifyNetwork();
 int piConfig();
-int record(int argc, char *argv[]);
+int record(char *argv[]);
 
 int main(int argc, char *argv[]) {  // <- corrected signature
-
+    chdir(WORKING_DIRECTORY);
     // Check if stdout is a terminal
     if (!isatty(fileno(stdout))) {
         // We are not in a terminal → launch xterm and replace this process
@@ -101,19 +101,31 @@ int main(int argc, char *argv[]) {  // <- corrected signature
                 break;
 
             case 7: // Record
+                char argument[256];
                 printf("\nEnter record filename: ");
                 fgets(argument, sizeof(argument), stdin);
-                argument[strcspn(argument, "\n")] = 0;
+                argument[strcspn(argument, "\n")] = 0;  // remove newline
+
                 if (strlen(argument) > 0)
                 {
-                    snprintf(command, sizeof(command), "~/Desktop/KAFD/Codes/record.o \"%s\"", argument);
                     printf("\n[+] Executing Record and Data Transfer...\n");
-                    system(command);
-                } else {
+
+                    // Wrap argument in an argv-like array for record()
+                    char *argv_for_record[2];
+                    argv_for_record[0] = "record_program"; // dummy program name
+                    argv_for_record[1] = argument;
+
+                    if (record(argv_for_record) != 0) {
+                        printf("Error Record!\n");
+                    }
+                }
+                else
+                {
                     printf("Error: Argument required.\n");
                 }
+
                 printf("\nPress Enter to return to menu...");
-                getchar();
+                getchar();  // wait for Enter
                 break;
 
             case 8:
@@ -133,6 +145,7 @@ int main(int argc, char *argv[]) {  // <- corrected signature
 // Example show_menu function
 void show_menu() {
     system("clear");
+    printf("WORKING_DIRECTORY : %s",WORKING_DIRECTORY);
     printf("\n========== KAFD CLI ==========\n");
     printf("1) Modify Network (Find active IPs)\n");
     printf("2) Add Network\n");

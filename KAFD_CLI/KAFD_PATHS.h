@@ -2,6 +2,7 @@
 #define KAFD_PATHS_H
 
 #define BASE_DIR "/home/kali/Desktop/KAFD"
+#define WORKING_DIRECTORY BASE_DIR "/KAFD_CLI"
 #define NETWORKS_FILE "NetworksFile.txt"
 #define IP_FILE "IPAdress.txt"
 

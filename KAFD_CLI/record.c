@@ -130,11 +130,7 @@ void getVideos(const char *remoteArg) {
 }
 
 // --------- RECORD FUNCTION ---------
-int record(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Usage: %s \"Argument to pass\"\n", argv[0]);
-        return 1;
-    }
+int record(char *argv[]) {
 
     if (!loadIPsFromFile() || !pingPis()) {
         printf("[-] Error: Could not connect to Pis\n");
@@ -151,11 +147,11 @@ int record(int argc, char *argv[]) {
 
     char pi01_cmd[512], pi02_cmd[512];
     snprintf(pi01_cmd, sizeof(pi01_cmd),
-             "ssh pi01@%s \"sleep $((60 - $(date +%%S))) && DISPLAY=:0 python3 /home/pi01/Desktop/Script/v3.py %s > /dev/null 2>&1\"",
-             pi01_ip, remoteArg);
+             "ssh pi01@%s \"sleep $((60 - $(date +%%S))) && DISPLAY=:0 python3 %s %s > /dev/null 2>&1\"",
+             PI01_SCRIPT, pi01_ip, remoteArg);
     snprintf(pi02_cmd, sizeof(pi02_cmd),
-             "ssh pi02@%s \"sleep $((60 - $(date +%%S))) && DISPLAY=:0 python3 /home/pi02/Desktop/Script/v3.py %s > /dev/null 2>&1\"",
-             pi02_ip, remoteArg);
+             "ssh pi02@%s \"sleep $((60 - $(date +%%S))) && DISPLAY=:0 python3 %s %s > /dev/null 2>&1\"",
+             PI02_SCRIPT, pi02_ip, remoteArg);
 
     pid_t pid1 = fork();
     if (pid1 == 0) { execl("/bin/sh", "sh", "-c", pi01_cmd, NULL); perror("pi01 exec"); exit(1); }
