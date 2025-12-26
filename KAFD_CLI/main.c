@@ -1,20 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#define ADD_NETWORK_SUCCESS 0
-#define ADD_NETWORK_CANCEL 1
-#define ADD_NETWORK_ERROR  2
-
-#define MAX_NAME 50
-#define MAX_IP   16
-
-struct ISP {
-    char NetworkName[MAX_NAME];
-    char pi01IPAddress[MAX_IP];
-    char pi02IPAddress[MAX_IP];
-};
+#include "../../KAFD/include/KAFD_COMMON.h"
+#include "../../KAFD/include/KADF_GLOBALS.h"
+#include "../../KAFD/include/KAFD_STRUCTS.h"
+#include "../../KAFD/include/KAFD_PATHS.h"
 
 // Function prototypes
 void show_menu();
@@ -73,12 +60,60 @@ int main(int argc, char *argv[]) {  // <- corrected signature
                 printf("\n[+] Running Add Network...\n");
                 int result = addNetwork();
                 if (result == ADD_NETWORK_CANCEL) printf("Add Network canceled by user.\n");
-                else if (result == ADD_NETWORK_ERROR) printf("Error adding network!\n");
+                else if (result == ADD_NETWORK_ERROR) printf("Error Adding network!\n");
                 printf("\nPress Enter to return to menu...");
                 getchar();
                 break;
 
-            // ... keep your other cases unchanged ...
+            case 3: // Load Network
+                printf("\n[+] Running Load Networks...\n");
+                int count; struct ISP *networks = loadNetworks(&count);
+                if (networks) {
+                    printAllNetworks(networks, count); // pass pointer and count
+                    free(networks); // free after use
+                } else {
+                    printf("No networks found.\n");
+                }
+                printf("\nPress Enter to return to menu...");
+                getchar();
+                break;
+
+            case 4: // Update Network
+                printf("\n[+] Running Update Network...\n");
+                if(updateNetwork() != 0) printf("Error Updating Network!\n");
+                printf("\nPress Enter to return to menu...");
+                getchar();
+                break;
+
+            case 5: // Delete Network
+                printf("\n[+] Running Delete Network...\n");
+                if(deleteNetwork() != 0) printf("Error Delete Network!\n");
+                printf("\nPress Enter to return to menu...");
+                getchar();
+                break;
+
+            case 6: // PIs Config
+                printf("\n[+] Running PIs Config...\n");
+                if(piConfig() != 0) printf("Error Configing PIs!\n");
+                printf("\nPress Enter to return to menu...");
+                getchar();
+                break;
+
+            case 7: // Record
+                printf("\nEnter record filename: ");
+                fgets(argument, sizeof(argument), stdin);
+                argument[strcspn(argument, "\n")] = 0;
+                if (strlen(argument) > 0)
+                {
+                    snprintf(command, sizeof(command), "~/Desktop/KAFD/Codes/record.o \"%s\"", argument);
+                    printf("\n[+] Executing Record and Data Transfer...\n");
+                    system(command);
+                } else {
+                    printf("Error: Argument required.\n");
+                }
+                printf("\nPress Enter to return to menu...");
+                getchar();
+                break;
 
             case 8:
                 system("clear");
