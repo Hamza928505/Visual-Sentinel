@@ -1,0 +1,39 @@
+# depslib dependency file v1.0
+1766818760 source:/home/kali/Desktop/C Codes/KAFD_CLI/main.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<unistd.h>
+
+1766599684 source:/home/kali/Desktop/C Codes/KAFD_CLI/KADFCLI.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
+1766816798 source:/home/kali/Desktop/C Codes/Network/updateNetwork.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<unistd.h>
+	<stdbool.h>
+	<sys/stat.h>
+
+1766806652 source:/home/kali/Desktop/C Codes/PI_Config/piConfig.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
+1766815907 source:/home/kali/Desktop/C Codes/sshpi/record.c
+	<stdio.h>
+	<stdlib.h>
+	<unistd.h>
+	<sys/wait.h>
+	<time.h>
+	<string.h>
+	<stdbool.h>
+
+1766810316 source:/home/kali/Desktop/C Codes/addNetwork/addNetwork.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+
