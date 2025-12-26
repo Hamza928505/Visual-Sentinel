@@ -1,3 +1,7 @@
+# For KAFD_CLI
+
+move the file to /home/<username>/Desktop/KAFD
+
 # KAFD-private
 
 DroneDatasetSnippet DataSet : https://github.com/Maciullo/DroneDetectionDataset
