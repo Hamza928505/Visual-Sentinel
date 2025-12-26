@@ -10,13 +10,15 @@
 	<stdlib.h>
 	<string.h>
 
-1766816798 source:/home/kali/Desktop/C Codes/Network/updateNetwork.c
+1766825859 source:/home/kali/Desktop/C Codes/Network/updateNetwork.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
 	<unistd.h>
 	<stdbool.h>
 	<sys/stat.h>
+	<limits.h>
+	<errno.h>
 
 1766806652 source:/home/kali/Desktop/C Codes/PI_Config/piConfig.c
 	<stdio.h>
