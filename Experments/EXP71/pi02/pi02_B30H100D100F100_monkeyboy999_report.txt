@@ -1,0 +1,5 @@
+YOLO Model Name: monkeyboy999
+Video: pi02_B30H100D100F100
+Total frames: 500
+Frames with detections: 348
+Detection rate: 348/500 = 69.60%

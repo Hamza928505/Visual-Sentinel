@@ -1,0 +1,5 @@
+YOLO Model Name: muki2003
+Video: pi02_B30H100D100F100
+Total frames: 500
+Frames with detections: 0
+Detection rate: 0/500 = 0.00%
