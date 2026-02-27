@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visual Sentinel — AI Stereo Vision Drone Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #060c14;
+  --bg2:       #0a1628;
+  --bg3:       #0d1f35;
+  --border:    rgba(0,210,255,0.15);
+  --border2:   rgba(0,210,255,0.3);
+  --cyan:      #00d2ff;
+  --cyan2:     #00ffcc;
+  --amber:     #ffb300;
+  --red:       #ff4444;
+  --text:      #c8d8e8;
+  --text-dim:  #4a6070;
+  --text-muted:#2a3a4a;
+  --glow:      0 0 20px rgba(0,210,255,0.3);
+  --glow2:     0 0 40px rgba(0,210,255,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'IBM Plex Mono';
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ── CUSTOM CURSOR ─────────────────────────────── */
+.cursor {
+  position: fixed; width: 8px; height: 8px;
+  background: var(--cyan); border-radius: 50%;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s, width 0.2s, height 0.2s;
+  mix-blend-mode: screen;
+}
+.cursor-ring {
+  position: fixed; width: 32px; height: 32px;
+  border: 1px solid rgba(0,210,255,0.5);
+  border-radius: 50%; pointer-events: none; z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s ease-out, width 0.3s, height 0.3s;
+}
+
+/* ── SCANLINE OVERLAY ──────────────────────────── */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none; z-index: 9990;
+}
+
+/* ── NOISE TEXTURE ─────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size: 200px;
+  pointer-events: none; z-index: 1; opacity: 0.4;
+}
+
+/* ── NAV ────────────────────────────────────────── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  padding: 20px 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(180deg, rgba(6,12,20,0.95) 0%, transparent 100%);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 3px; color: var(--cyan);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-logo::before {
+  content: '◈';
+  font-size: 18px;
+  animation: pulse-logo 2s ease-in-out infinite;
+}
+@keyframes pulse-logo {
+  0%,100% { opacity:1; text-shadow: 0 0 10px var(--cyan); }
+  50% { opacity:0.6; text-shadow: none; }
+}
+.nav-links {
+  display: flex; gap: 40px; list-style: none;
+}
+.nav-links a {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-weight: 400;
+  letter-spacing: 2px; color: var(--text-dim);
+  text-decoration: none; text-transform: uppercase;
+  transition: color 0.2s;
+  position: relative;
+}
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 1px; background: var(--cyan);
+  transition: width 0.3s;
+}
+.nav-links a:hover { color: var(--cyan); }
+.nav-links a:hover::after { width: 100%; }
+.nav-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; color: var(--text-muted);
+}
+
+/* ── HERO ───────────────────────────────────────── */
+#hero {
+  position: relative; min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 120px 60px 80px;
+  overflow: hidden;
+}
+
+/* Grid background */
+.hero-grid {
+  position: absolute; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(0,210,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,210,255,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%);
+}
+
+/* Stereo camera wireframe */
+.camera-frame {
+  position: absolute; right: 18%; bottom: 15%;
+  width: 200px; z-index: 1; opacity: 0.2;
+}
+
+.hero-content { position: relative; z-index: 2; max-width: 720px; }
+
+.hero-eyebrow {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 28px;
+}
+.eyebrow-line {
+  width: 40px; height: 1px; background: var(--cyan);
+  box-shadow: var(--glow);
+}
+.eyebrow-text {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; letter-spacing: 4px;
+  color: var(--cyan); text-transform: uppercase;
+}
+
+h1 {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 900; line-height: 1.05;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+  color: #e8f4ff;
+}
+h1 .accent {
+  display: block;
+  background: linear-gradient(90deg, var(--cyan), var(--cyan2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+}
+h1 .sub-title {
+  font-size: clamp(18px, 2.5vw, 28px);
+  font-weight: 600; color: rgba(200,220,240,0.7);
+  display: block; margin-top: 6px;
+}
+
+.hero-subtitle {
+  font-family: 'IBM Plex Mono';
+  font-size: 16px; font-weight: 300;
+  color: var(--text-dim); line-height: 1.7;
+  margin: 28px 0 44px;
+  max-width: 560px;
+  border-left: 2px solid var(--border2);
+  padding-left: 20px;
+}
+
+.hero-buttons {
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 32px;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; letter-spacing: 2px;
+  text-transform: uppercase; text-decoration: none;
+  cursor: none;
+  position: relative; overflow: hidden;
+  transition: color 0.3s;
+}
+.btn-primary::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--cyan);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: -1;
+}
+.btn-primary:hover::before { transform: translateX(0); }
+.btn-primary:hover { color: var(--bg); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 32px;
+  background: rgba(0,210,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; letter-spacing: 2px;
+  text-transform: uppercase; text-decoration: none;
+  cursor: none;
+  transition: all 0.3s;
+}
+.btn-secondary:hover {
+  border-color: var(--border2);
+  color: var(--text);
+  background: rgba(0,210,255,0.1);
+}
+
+/* Stats row */
+.hero-stats {
+  display: flex; gap: 48px;
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+}
+.stat { display: flex; flex-direction: column; gap: 4px; }
+.stat-value {
+  font-family: 'Orbitron', monospace;
+  font-size: 28px; font-weight: 700;
+  color: var(--cyan);
+  text-shadow: 0 0 20px rgba(0,210,255,0.5);
+}
+.stat-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--text-dim); text-transform: uppercase;
+}
+
+/* ── SECTION COMMONS ────────────────────────────── */
+section { position: relative; padding: 100px 60px; overflow: hidden; }
+
+.section-header { margin-bottom: 64px; }
+.section-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 4px;
+  color: var(--cyan); text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.section-tag::before {
+  content: '//'; color: var(--text-muted);
+}
+h2 {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(24px, 3vw, 40px);
+  font-weight: 700; color: #e8f4ff;
+  letter-spacing: -0.5px;
+}
+.section-line {
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, var(--cyan), transparent);
+  margin-top: 16px;
+  box-shadow: 0 0 10px var(--cyan);
+}
+
+/* ── ARCHITECTURE ───────────────────────────────── */
+#architecture { background: var(--bg2); }
+
+.arch-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background: radial-gradient(ellipse 60% 60% at 80% 50%, rgba(0,210,255,0.03) 0%, transparent 70%);
+}
+.arch-grid {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2px;
+}
+.arch-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 36px 32px;
+  position: relative;
+  transition: all 0.3s ease;
+  cursor: none;
+  overflow: hidden;
+}
+.arch-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+.arch-card::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(0,210,255,0.06) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s;
+}
+.arch-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), var(--glow2);
+}
+.arch-card:hover::before { opacity: 1; }
+.arch-card:hover::after  { opacity: 1; }
+
+.arch-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--text-muted);
+  letter-spacing: 2px; margin-bottom: 20px;
+}
+.arch-icon {
+  font-size: 28px; margin-bottom: 16px;
+  filter: saturate(0.5);
+  transition: filter 0.3s;
+}
+.arch-card:hover .arch-icon { filter: saturate(1); }
+
+.arch-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 13px; font-weight: 600;
+  color: #e8f4ff; letter-spacing: 1px;
+  margin-bottom: 12px; text-transform: uppercase;
+}
+.arch-desc {
+  font-size: 13px; line-height: 1.7;
+  color: var(--text-dim); font-weight: 300;
+}
+.arch-tags {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 20px;
+}
+.arch-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 1px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+.arch-card:hover .arch-tag {
+  border-color: rgba(0,210,255,0.2);
+  color: rgba(0,210,255,0.6);
+}
+
+/* ── FEATURES ───────────────────────────────────── */
+#features { background: var(--bg); }
+
+.features-list { display: flex; flex-direction: column; gap: 2px; }
+.feature-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  transition: all 0.3s;
+  overflow: hidden;
+  cursor: none;
+}
+.feature-row:hover {
+  border-color: var(--border2);
+  box-shadow: var(--glow2);
+}
+.feature-row.reverse { direction: rtl; }
+.feature-row.reverse > * { direction: ltr; }
+
+.feature-content {
+  padding: 48px 52px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.feature-index {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--text-muted); margin-bottom: 20px;
+}
+.feature-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 18px; font-weight: 600;
+  color: #e8f4ff; margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+.feature-desc {
+  font-size: 14px; line-height: 1.8;
+  color: var(--text-dim); font-weight: 300;
+}
+.feature-metric {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-top: 24px;
+}
+.metric-val {
+  font-family: 'Orbitron', monospace;
+  font-size: 32px; font-weight: 700;
+  color: var(--cyan);
+}
+.metric-unit {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.feature-visual {
+  background: var(--bg3);
+  border-left: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px;
+  position: relative; overflow: hidden;
+  min-height: 280px;
+}
+.feature-row.reverse .feature-visual {
+  border-left: none;
+  border-right: 1px solid var(--border);
+}
+
+/* SVG visualizations inside feature panels */
+.viz-container { width: 100%; max-width: 280px; height: 250px; }
+
+/* ── DASHBOARD PREVIEW ──────────────────────────── */
+#dashboard { background: var(--bg2); }
+
+.dashboard-caption {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; color: var(--text-dim);
+  letter-spacing: 1px; margin-bottom: 48px;
+  max-width: 600px; line-height: 1.8;
+}
+.dashboard-caption span { color: var(--cyan); }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 2px;
+}
+.dash-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  cursor: none;
+  transition: border-color 0.3s;
+}
+.dash-panel:hover { border-color: var(--border2); }
+
+.dash-panel.large { grid-row: span 2; }
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.3);
+}
+.panel-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--text-dim); text-transform: uppercase;
+}
+.panel-status {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; color: var(--cyan2); letter-spacing: 1px;
+}
+.status-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--cyan2);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,255,204,0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(0,255,204,0); }
+}
+
+.panel-body { padding: 24px; height: 240px; }
+.panel-body.tall { height: 490px; }
+
+/* Chart mockup */
+.chart-bars {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 100%; padding-bottom: 20px;
+}
+.bar-group { flex: 1; display: flex; gap: 3px; align-items: flex-end; }
+.bar {
+  flex: 1; border-radius: 2px 2px 0 0;
+  transition: opacity 0.3s;
+}
+.bar.h-bar { background: var(--cyan); opacity: 0.7; }
+.bar.d-bar { background: var(--amber); opacity: 0.5; }
+.dash-panel:hover .bar { opacity: 1; }
+
+/* GPS map mockup */
+.map-mock {
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(circle at 35% 55%, rgba(0,210,255,0.08) 0%, transparent 40%),
+    linear-gradient(rgba(0,210,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,210,255,0.03) 1px, transparent 1px);
+  background-size: 100%, 30px 30px, 30px 30px;
+  position: relative;
+}
+.map-point {
+  position: absolute; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+  transform: translate(-50%, -50%);
+}
+.map-point::after {
+  content: ''; position: absolute; inset: -6px;
+  border-radius: 50%; border: 1px solid rgba(0,210,255,0.3);
+  animation: ping 2s ease-out infinite;
+}
+@keyframes ping {
+  0%  { transform: scale(1); opacity: 1; }
+  100%{ transform: scale(3); opacity: 0; }
+}
+.map-line {
+  position: absolute; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0.3;
+}
+
+/* Detection viewer mockup */
+.detection-mock {
+  width: 100%; height: 100%;
+  background: #020810;
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+}
+.cam-feed {
+  background: #050d18;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.cam-label {
+  position: absolute; top: 6px; left: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; color: var(--cyan); letter-spacing: 1px;
+}
+.drone-bbox {
+  width: 40px; height: 30px;
+  border: 1px solid #00ff44;
+  position: relative;
+  box-shadow: 0 0 8px rgba(0,255,68,0.4);
+}
+.drone-bbox::before {
+  content: 'DRONE'; position: absolute;
+  top: -16px; left: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px; color: #00ff44; letter-spacing: 1px;
+}
+.drone-bbox::after {
+  content: ''; position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px; height: 4px;
+  background: #00ff44; border-radius: 50%;
+}
+.crosshair-h, .crosshair-v {
+  position: absolute; background: rgba(0,255,68,0.15);
+}
+.crosshair-h { height: 1px; left: 0; right: 0; top: 50%; }
+.crosshair-v { width: 1px; top: 0; bottom: 0; left: 50%; }
+
+/* Stats panel */
+.stats-list { display: flex; flex-direction: column; gap: 12px; height: 100%; }
+.stat-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.stat-row:last-child { border: none; }
+.stat-key {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 1px;
+  color: var(--text-dim); text-transform: uppercase;
+}
+.stat-v {
+  font-family: 'Orbitron', monospace;
+  font-size: 14px; font-weight: 600; color: var(--cyan);
+}
+.stat-v.amber { color: var(--amber); }
+.stat-v.green { color: var(--cyan2); }
+
+/* ── TECH STACK ─────────────────────────────────── */
+#stack { background: var(--bg); }
+
+.stack-categories { display: flex; flex-direction: column; gap: 40px; }
+.stack-category-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 4px;
+  color: var(--text-muted); text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.stack-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+.stack-pill {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; letter-spacing: 1px;
+  color: var(--text-dim);
+  transition: all 0.25s;
+  cursor: none;
+}
+.stack-pill:hover {
+  border-color: var(--border2);
+  color: var(--cyan);
+  background: rgba(0,210,255,0.05);
+  box-shadow: var(--glow2);
+  transform: translateY(-1px);
+}
+.pill-icon { font-size: 16px; filter: grayscale(0.5); }
+.stack-pill:hover .pill-icon { filter: none; }
+
+/* ── ABOUT ──────────────────────────────────────── */
+#about { background: var(--bg2); }
+
+.about-layout {
+  display: grid; grid-template-columns: 1fr 400px; gap: 80px;
+  align-items: start;
+}
+.about-text p {
+  font-size: 15px; line-height: 1.9;
+  color: var(--text-dim); font-weight: 300;
+  margin-bottom: 20px;
+}
+.about-text p strong { color: var(--text); font-weight: 600; }
+
+.about-metrics {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+}
+.about-metric {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 28px 24px;
+  transition: all 0.3s;
+}
+.about-metric:hover {
+  border-color: var(--border2);
+  box-shadow: var(--glow2);
+}
+.am-val {
+  font-family: 'Orbitron', monospace;
+  font-size: 36px; font-weight: 700;
+  color: var(--cyan);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.am-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 2px;
+  color: var(--text-dim); text-transform: uppercase;
+}
+
+/* ── ACKNOWLEDGMENT ─────────────────────────────── */
+#acknowledgment {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.ack-layout {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 80px;
+}
+
+.ack-group-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 4px;
+  color: var(--text-muted); text-transform: uppercase;
+  margin-bottom: 28px;
+}
+.ack-people { display: flex; flex-direction: column; gap: 16px; }
+.ack-person {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 16px 0; border-bottom: 1px solid var(--border);
+}
+.ack-person:last-child { border: none; }
+.ack-name {
+  font-family: 'IBM Plex Mono';
+  font-size: 15px; font-weight: 600; color: #e8f4ff;
+}
+.ack-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 1px; color: var(--text-muted);
+}
+.ack-orgs { display: flex; flex-direction: column; gap: 16px; }
+.ack-org {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  transition: all 0.3s;
+}
+.ack-org:hover { border-color: var(--border2); }
+.org-icon {
+  width: 40px; height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.org-name {
+  font-family: 'IBM Plex Mono';
+  font-size: 13px; font-weight: 600; color: var(--text);
+}
+.org-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 1px; color: var(--text-muted);
+}
+
+/* ── FOOTER ─────────────────────────────────────── */
+footer {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 32px 60px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.footer-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 3px; color: var(--text-dim);
+}
+.footer-copy {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--text-muted);
+}
+
+/* ── SCROLL REVEAL ──────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+.reveal-delay-5 { transition-delay: 0.5s; }
+.reveal-delay-6 { transition-delay: 0.6s; }
+
+/* ── TERMINAL LINE ──────────────────────────────── */
+.terminal-line {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; color: var(--text-muted);
+  letter-spacing: 1px; display: flex; gap: 10px;
+  margin-top: 10px;
+}
+.terminal-line::before { content: '>_'; color: var(--cyan); }
+
+/* ── RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 1100px) {
+  nav { padding: 16px 30px; }
+  .nav-links { display: none; }
+  section { padding: 80px 30px; }
+  #hero { padding: 120px 30px 60px; }
+  .feature-row { grid-template-columns: 1fr; }
+  .feature-row.reverse { direction: ltr; }
+  .feature-visual { min-height: 180px; }
+  .about-layout { grid-template-columns: 1fr; }
+  .ack-layout { grid-template-columns: 1fr; gap: 40px; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .dash-panel.large { grid-row: span 1; }
+  .panel-body.tall { height: 240px; }
+  .hero-stats { flex-wrap: wrap; gap: 28px; }
+  footer { flex-direction: column; gap: 12px; text-align: center; }
+}
+
+#project-chronicles { background: var(--bg2); padding-bottom: 120px; overflow: hidden; }
+
+.chronicle-container {
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.chronicle-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chronicle-card {
+  min-width: 100%;
+  opacity: 0.3;
+  transform: scale(0.9);
+  transition: all 0.5s ease;
+  padding: 0 20px;
+}
+
+.chronicle-card.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.vid-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 1px solid var(--border);
+  box-shadow: var(--glow2);
+  position: relative;
+}
+
+.vid-wrapper video { width: 100%; height: 100%; }
+
+.speaker-badge {
+  position: absolute;
+  top: 0px;
+  right: 20px;
+  padding: 8px 15px;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  transform: translateY(-10px);
+  
+  /* Hud Look */
+  backdrop-filter: blur(8px);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.speaker-badge.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Dark HUD Variant (Apply this) */
+.dark-hud {
+  /* Dark, semi-transparent background */
+  background: rgba(2, 8, 16, 0.75); 
+  /* Dimmed cyan border */
+  border: 1px solid rgba(0, 210, 255, 0.25); 
+  /* Dimmed cyan text (vs. bright #00d2ff) */
+  color: #00a8cc; 
+  /* Subtle dark shadow */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); 
+}
+
+.speaker-badge.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chronicle-info {
+  margin-top: 25px;
+  text-align: center;
+}
+
+.chronicle-info h3 {
+  font-family: 'Orbitron', sans-serif;
+  color: var(--cyan);
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+  font-size: 24px;
+}
+
+.chronicle-info p {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  color: var(--text-dim);
+  max-width: 650px;
+  margin: 0 auto;
+  line-height: 1.8;
+}
+
+.chronicle-nav {
+  position: absolute;
+  top: 40%;
+  width: 110%;
+  left: -5%;
+  display: flex;
+  justify-content: space-between;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.nav-btn {
+  width: 50px; height: 50px;
+  background: var(--bg);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: all 0.3s;
+  z-index: 10;
+  font-size: 20px;
+}
+
+.nav-btn:hover { background: var(--cyan); color: var(--bg); box-shadow: var(--glow); }
+
+.vid-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text-muted);
+  background: repeating-linear-gradient(45deg, #060c14, #060c14 10px, #0a1628 10px, #0a1628 20px);
+}
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Visual Sentinel</div>
+  <ul class="nav-links">
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#stack">Stack</a></li>
+    <li><a href="#about">About</a></li>
+  </ul>
+  <div class="nav-tag">Graduation Project // 2025/2026</div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid"></div>
+
+  <div class="hero-content">
+    <div class="hero-eyebrow reveal">
+      <div class="eyebrow-line"></div>
+      <span class="eyebrow-text">Graduation Research Project</span>
+    </div>
+
+    <h1 class="reveal reveal-delay-1">
+      <span class="accent">Visual Sentinel</span>
+      <span class="sub-title">AI Stereo Vision &amp; Drone Detection</span>
+    </h1>
+
+    <p class="hero-subtitle reveal reveal-delay-2">
+      An end-to-end embedded and AI system for real-time drone detection, metric depth estimation, IMU integration, and GPS projection.
+    </p>
+
+    <div class="terminal-line reveal reveal-delay-3">
+      system.status: OPERATIONAL &nbsp;|&nbsp; model: YOLOv8 + ML Regression &nbsp;|&nbsp; cameras: STEREO_PAIR_ACTIVE
+    </div>
+
+    <div class="hero-buttons reveal reveal-delay-4" style="margin-top:36px;">
+      <a href="#architecture" class="btn-primary">⬡ View System Architecture</a>
+      <a href="#dashboard" class="btn-secondary">◈ Explore Dashboard</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- Videos Slider -->
+<section id="project-chronicles">
+  <div class="section-header reveal">
+    <div class="section-tag">Development Story</div>
+    <h2>Behind the Sentinel</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="chronicle-container reveal">
+    <div id="speakerBadge" class="speaker-badge dark-hud">INITIALIZING...</div>
+
+    <div class="chronicle-track" id="chronicleTrack">
+      
+      <div class="chronicle-card active">
+        <div class="vid-wrapper">
+          <div class="scanline-overlay"></div>
+          <video id="mainVideo" controls poster="thumb_main.jpg">
+            <source src="WhatsApp Video 2026-02-24 at 12.44.30 AM.mp4" type="video/mp4">
+          </video>
+        </div>
+        <div class="chronicle-info">
+          <h3 id="dynamicTitle">The Vision</h3>
+          <p id="dynamicDesc">An overview of the Visual Sentinel system, featuring Dr. Amani Abu Jabal and the technical team in the field.</p>
+        </div>
+      </div>
+
+      <div class="chronicle-card">
+        <div class="vid-wrapper">
+          <div class="vid-placeholder">
+            <span class="glitch-text" data-text="WAITING_FOR_DATA">EXP_02_PENDING</span>
+          </div>
+        </div>
+        <div class="chronicle-info">
+          <h3>Upcoming Feature</h3>
+          <p>Additional project footage and hardware documentation will be updated here shortly.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="chronicle-nav">
+      <button class="nav-btn prev" onclick="moveChronicle(-1)">←</button>
+      <button class="nav-btn next" onclick="moveChronicle(1)">→</button>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="arch-bg"></div>
+  <div class="section-header reveal">
+    <div class="section-tag">System Architecture</div>
+    <h2>Six-Layer Pipeline</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="arch-grid">
+    <div class="arch-card reveal reveal-delay-1">
+      <div class="arch-num">01 // LAYER</div>
+      <div class="arch-icon">🖥</div>
+      <div class="arch-name">Embedded System</div>
+      <div class="arch-desc">Orchestration layer running on Raspberry Pi with C-based low-level control, Linux OS task scheduling, and multi-process coordination.</div>
+      <div class="arch-tags">
+        <span class="arch-tag">C</span>
+        <span class="arch-tag">Linux</span>
+        <span class="arch-tag">Raspberry Pi</span>
+        <span class="arch-tag">Multi-Process</span>
+      </div>
+    </div>
+
+    <div class="arch-card reveal reveal-delay-2">
+      <div class="arch-num">02 // LAYER</div>
+      <div class="arch-icon">📷</div>
+      <div class="arch-name">Stereo Camera Capture</div>
+      <div class="arch-desc">Synchronized dual-camera acquisition at 1920×1080. Pi01 left channel, Pi02 right channel with timestamped frame pairing.</div>
+      <div class="arch-tags">
+        <span class="arch-tag">Pi Camera v2</span>
+        <span class="arch-tag">OpenCV</span>
+        <span class="arch-tag">1080p</span>
+      </div>
+    </div>
+
+    <div class="arch-card reveal reveal-delay-3">
+      <div class="arch-num">03 // LAYER</div>
+      <div class="arch-icon">🎯</div>
+      <div class="arch-name">YOLOv8 Drone Detection</div>
+      <div class="arch-desc">Fine-tuned YOLOv8s trained on labeled stereo frames. Transfer learning from COCO with heavy augmentation for small aerial targets.</div>
+      <div class="arch-tags">
+        <span class="arch-tag">YOLOv8</span>
+        <span class="arch-tag">PyTorch</span>
+        <span class="arch-tag">GPU</span>
+      </div>
+    </div>
+
+    <div class="arch-card reveal reveal-delay-4">
+      <div class="arch-num">04 // LAYER</div>
+      <div class="arch-icon">🧠</div>
+      <div class="arch-name">ML Depth Regression</div>
+      <div class="arch-desc">Residual MLP trained on stereo bounding box pairs. Inputs: cx, cy, w, h per camera + B + F. Outputs: H (height), D (depth) in meters.</div>
+      <div class="arch-tags">
+        <span class="arch-tag">Residual MLP</span>
+        <span class="arch-tag">K-Fold CV</span>
+        <span class="arch-tag">PyTorch</span>
+      </div>
+    </div>
+
+    <div class="arch-card reveal reveal-delay-5">
+      <div class="arch-num">05 // LAYER</div>
+      <div class="arch-icon">🔄</div>
+      <div class="arch-name">IMU Orientation Modeling</div>
+      <div class="arch-desc">Inertial measurement integration for camera pose estimation. Corrects geometric estimations for platform pitch, roll, and yaw during capture.</div>
+      <div class="arch-tags">
+        <span class="arch-tag">IMU</span>
+        <span class="arch-tag">Sensor Fusion</span>
+        <span class="arch-tag">Euler Angles</span>
+      </div>
+    </div>
+
+    <div class="arch-card reveal reveal-delay-6">
+      <div class="arch-num">06 // LAYER</div>
+      <div class="arch-icon">🌍</div>
+      <div class="arch-name">GPS Projection Engine</div>
+      <div class="arch-desc">Projects estimated 3D drone coordinates into real-world GPS coordinates using camera bearing and platform location as reference origin.</div>
+      <div class="arch-tags">
+        <span class="arch-tag">GPS</span>
+        <span class="arch-tag">GeoJSON</span>
+        <span class="arch-tag">Bearing Calc</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-header reveal">
+    <div class="section-tag">Core Capabilities</div>
+    <h2>System Features</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="features-list">
+
+    <!-- Feature 1 -->
+    <div class="feature-row reveal">
+      <div class="feature-content">
+        <div class="feature-index">Feature 01</div>
+        <div class="feature-title">Real-Time Stereo Geometry Reconstruction</div>
+        <div class="feature-desc">Synchronized dual-channel capture feeds a complete stereo pipeline. Each frame pair is processed for disparity estimation, enabling metric 3D reconstruction of detected drone positions in real-world coordinates.</div>
+        <div class="feature-metric">
+          <span class="metric-val">3</span>
+          <span class="metric-unit">spatial axes · H · Z · X</span>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <svg class="viz-container" viewBox="0 0 280 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Stereo camera pair -->
+          <rect x="20" y="70" width="50" height="40" rx="4" stroke="rgba(0,210,255,0.4)" stroke-width="1" fill="rgba(0,210,255,0.05)"/>
+          <rect x="30" y="80" width="30" height="20" rx="2" stroke="rgba(0,210,255,0.3)" stroke-width="1" fill="none"/>
+          <circle cx="45" cy="90" r="8" stroke="rgba(0,210,255,0.5)" stroke-width="1" fill="rgba(0,210,255,0.1)"/>
+          <text x="45" y="125" text-anchor="middle" fill="rgba(0,210,255,0.4)" font-family="monospace" font-size="8">PI01 (L)</text>
+
+          <rect x="210" y="70" width="50" height="40" rx="4" stroke="rgba(255,179,0,0.4)" stroke-width="1" fill="rgba(255,179,0,0.05)"/>
+          <rect x="220" y="80" width="30" height="20" rx="2" stroke="rgba(255,179,0,0.3)" stroke-width="1" fill="none"/>
+          <circle cx="235" cy="90" r="8" stroke="rgba(255,179,0,0.5)" stroke-width="1" fill="rgba(255,179,0,0.1)"/>
+          <text x="235" y="125" text-anchor="middle" fill="rgba(255,179,0,0.4)" font-family="monospace" font-size="8">PI02 (R)</text>
+
+          <!-- Drone target -->
+          <rect x="122" y="20" width="36" height="28" rx="2" stroke="#00ff44" stroke-width="1" fill="rgba(0,255,68,0.05)"/>
+          <line x1="122" y1="34" x2="158" y2="34" stroke="rgba(0,255,68,0.2)" stroke-width="1"/>
+          <line x1="140" y1="20" x2="140" y2="48" stroke="rgba(0,255,68,0.2)" stroke-width="1"/>
+          <circle cx="140" cy="34" r="3" fill="#00ff44"/>
+          <text x="140" y="14" text-anchor="middle" fill="#00ff44" font-family="monospace" font-size="8">DRONE</text>
+
+          <!-- Projection lines -->
+          <line x1="45" y1="70" x2="140" y2="48" stroke="rgba(0,210,255,0.3)" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="235" y1="70" x2="140" y2="48" stroke="rgba(255,179,0,0.3)" stroke-width="1" stroke-dasharray="4 3"/>
+
+          <!-- Measurement arrows -->
+          <line x1="45" y1="145" x2="235" y2="145" stroke="rgba(0,210,255,0.2)" stroke-width="1"/>
+          <text x="140" y="158" text-anchor="middle" fill="rgba(0,210,255,0.5)" font-family="monospace" font-size="8">BASELINE B</text>
+
+          <line x1="260" y1="48" x2="260" y2="90" stroke="rgba(0,210,255,0.2)" stroke-width="1"/>
+          <text x="275" y="72" text-anchor="middle" fill="rgba(0,210,255,0.5)" font-family="monospace" font-size="8">H</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Feature 2 -->
+    <div class="feature-row reverse reveal">
+      <div class="feature-content">
+        <div class="feature-index">Feature 02</div>
+        <div class="feature-title">ML Regression — H, D, X Estimation</div>
+        <div class="feature-desc">A residual MLP learns the mapping from paired bounding boxes and camera parameters to metric 3D coordinates. Trained with K-Fold cross-validation on 70 structured experiments with ground truth labels.</div>
+        <div class="feature-metric">
+          <span class="metric-val">5</span>
+          <span class="metric-unit">fold cross-validation</span>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <svg class="viz-container" viewBox="0 0 280 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Neural network nodes -->
+          <g opacity="0.7">
+            <!-- Input layer -->
+            <circle cx="30" cy="40" r="6" stroke="rgba(0,210,255,0.6)" stroke-width="1" fill="rgba(0,210,255,0.1)"/>
+            <circle cx="30" cy="70" r="6" stroke="rgba(0,210,255,0.6)" stroke-width="1" fill="rgba(0,210,255,0.1)"/>
+            <circle cx="30" cy="100" r="6" stroke="rgba(0,210,255,0.6)" stroke-width="1" fill="rgba(0,210,255,0.1)"/>
+            <circle cx="30" cy="130" r="6" stroke="rgba(0,210,255,0.6)" stroke-width="1" fill="rgba(0,210,255,0.1)"/>
+            <circle cx="30" cy="160" r="6" stroke="rgba(0,210,255,0.6)" stroke-width="1" fill="rgba(0,210,255,0.1)"/>
+            <text x="8" y="43" fill="rgba(0,210,255,0.4)" font-family="monospace" font-size="7">cx_L</text>
+            <text x="8" y="73" fill="rgba(0,210,255,0.4)" font-family="monospace" font-size="7">cy_L</text>
+            <text x="8" y="103" fill="rgba(0,210,255,0.4)" font-family="monospace" font-size="7">cx_R</text>
+            <text x="8" y="133" fill="rgba(0,210,255,0.4)" font-family="monospace" font-size="7">cy_R</text>
+            <text x="12" y="163" fill="rgba(0,210,255,0.4)" font-family="monospace" font-size="7">B,F</text>
+
+            <!-- Hidden layer 1 -->
+            <circle cx="100" cy="30" r="6" stroke="rgba(0,255,204,0.5)" stroke-width="1" fill="rgba(0,255,204,0.08)"/>
+            <circle cx="100" cy="60" r="6" stroke="rgba(0,255,204,0.5)" stroke-width="1" fill="rgba(0,255,204,0.08)"/>
+            <circle cx="100" cy="90" r="6" stroke="rgba(0,255,204,0.5)" stroke-width="1" fill="rgba(0,255,204,0.08)"/>
+            <circle cx="100" cy="120" r="6" stroke="rgba(0,255,204,0.5)" stroke-width="1" fill="rgba(0,255,204,0.08)"/>
+            <circle cx="100" cy="150" r="6" stroke="rgba(0,255,204,0.5)" stroke-width="1" fill="rgba(0,255,204,0.08)"/>
+            <circle cx="100" cy="175" r="6" stroke="rgba(0,255,204,0.5)" stroke-width="1" fill="rgba(0,255,204,0.08)"/>
+
+            <!-- Hidden layer 2 -->
+            <circle cx="170" cy="45" r="6" stroke="rgba(0,255,204,0.4)" stroke-width="1" fill="rgba(0,255,204,0.06)"/>
+            <circle cx="170" cy="80" r="6" stroke="rgba(0,255,204,0.4)" stroke-width="1" fill="rgba(0,255,204,0.06)"/>
+            <circle cx="170" cy="115" r="6" stroke="rgba(0,255,204,0.4)" stroke-width="1" fill="rgba(0,255,204,0.06)"/>
+            <circle cx="170" cy="150" r="6" stroke="rgba(0,255,204,0.4)" stroke-width="1" fill="rgba(0,255,204,0.06)"/>
+
+            <!-- Output layer -->
+            <circle cx="250" cy="70" r="8" stroke="#00d2ff" stroke-width="1.5" fill="rgba(0,210,255,0.15)"/>
+            <circle cx="250" cy="115" r="8" stroke="#ffb300" stroke-width="1.5" fill="rgba(255,179,0,0.15)"/>
+            <text x="264" y="73" fill="rgba(0,210,255,0.8)" font-family="monospace" font-size="9">H</text>
+            <text x="264" y="118" fill="rgba(255,179,0,0.8)" font-family="monospace" font-size="9">D</text>
+
+            <!-- Connections (simplified) -->
+            <g stroke="rgba(0,255,204,0.08)" stroke-width="0.5">
+              <line x1="36" y1="40" x2="94" y2="30"/>
+              <line x1="36" y1="40" x2="94" y2="90"/>
+              <line x1="36" y1="70" x2="94" y2="60"/>
+              <line x1="36" y1="70" x2="94" y2="120"/>
+              <line x1="36" y1="100" x2="94" y2="90"/>
+              <line x1="36" y1="100" x2="94" y2="150"/>
+              <line x1="36" y1="130" x2="94" y2="60"/>
+              <line x1="36" y1="130" x2="94" y2="150"/>
+              <line x1="36" y1="160" x2="94" y2="120"/>
+              <line x1="36" y1="160" x2="94" y2="175"/>
+            </g>
+            <g stroke="rgba(0,255,204,0.08)" stroke-width="0.5">
+              <line x1="106" y1="30" x2="164" y2="45"/>
+              <line x1="106" y1="60" x2="164" y2="80"/>
+              <line x1="106" y1="90" x2="164" y2="80"/>
+              <line x1="106" y1="120" x2="164" y2="115"/>
+              <line x1="106" y1="150" x2="164" y2="150"/>
+              <line x1="106" y1="175" x2="164" y2="150"/>
+            </g>
+            <g stroke="rgba(0,210,255,0.15)" stroke-width="0.8">
+              <line x1="176" y1="45" x2="242" y2="70"/>
+              <line x1="176" y1="80" x2="242" y2="70"/>
+              <line x1="176" y1="115" x2="242" y2="115"/>
+              <line x1="176" y1="150" x2="242" y2="115"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Feature 3 -->
+    <div class="feature-row reveal">
+      <div class="feature-content">
+        <div class="feature-index">Feature 03</div>
+        <div class="feature-title">Experiment Archive — 70+ Structured Runs</div>
+        <div class="feature-desc">Every experiment is systematically catalogued with stereo video pairs, IMU logs, GPS data, and computed metrics. The dashboard allows instant filtering, comparison, and statistical analysis across the full dataset.</div>
+        <div class="feature-metric">
+          <span class="metric-val">70+</span>
+          <span class="metric-unit">experiments archived</span>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <div style="width:100%; max-width:280px;">
+          <svg viewBox="0 0 280 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Bar chart mock -->
+            <g opacity="0.8">
+              <!-- x-axis -->
+              <line x1="20" y1="140" x2="270" y2="140" stroke="rgba(0,210,255,0.2)" stroke-width="1"/>
+              <!-- y-axis -->
+              <line x1="20" y1="10" x2="20" y2="140" stroke="rgba(0,210,255,0.2)" stroke-width="1"/>
+              <!-- Grid lines -->
+              <line x1="20" y1="110" x2="270" y2="110" stroke="rgba(0,210,255,0.06)" stroke-width="1" stroke-dasharray="3 3"/>
+              <line x1="20" y1="80" x2="270" y2="80" stroke="rgba(0,210,255,0.06)" stroke-width="1" stroke-dasharray="3 3"/>
+              <line x1="20" y1="50" x2="270" y2="50" stroke="rgba(0,210,255,0.06)" stroke-width="1" stroke-dasharray="3 3"/>
+              <!-- Bars - H error -->
+              <rect x="30" y="95" width="12" height="45" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="55" y="88" width="12" height="52" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="80" y="70" width="12" height="70" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="105" y="100" width="12" height="40" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="130" y="85" width="12" height="55" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="155" y="60" width="12" height="80" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="180" y="92" width="12" height="48" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="205" y="78" width="12" height="62" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <rect x="230" y="105" width="12" height="35" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <!-- Bars - D error overlaid -->
+              <rect x="44" y="105" width="9" height="35" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="69" y="98" width="9" height="42" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="94" y="82" width="9" height="58" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="119" y="112" width="9" height="28" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="144" y="95" width="9" height="45" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="169" y="72" width="9" height="68" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="194" y="100" width="9" height="40" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="219" y="88" width="9" height="52" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <rect x="244" y="115" width="9" height="25" fill="rgba(255,179,0,0.35)" rx="1"/>
+              <!-- Legend -->
+              <rect x="22" y="14" width="8" height="6" fill="rgba(0,210,255,0.5)" rx="1"/>
+              <text x="34" y="20" fill="rgba(0,210,255,0.6)" font-family="monospace" font-size="8">Height Error</text>
+              <rect x="110" y="14" width="8" height="6" fill="rgba(255,179,0,0.5)" rx="1"/>
+              <text x="122" y="20" fill="rgba(255,179,0,0.6)" font-family="monospace" font-size="8">Depth Error</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature 4 -->
+    <div class="feature-row reverse reveal">
+      <div class="feature-content">
+        <div class="feature-index">Feature 04</div>
+        <div class="feature-title">Live GPS Map Projection</div>
+        <div class="feature-desc">Estimated 3D drone coordinates are projected onto real-world geographic coordinates using platform GPS and bearing calculations. Interactive Leaflet map renders detection points, flight traces, and zone boundaries.</div>
+        <div class="feature-metric">
+          <span class="metric-val">GPS</span>
+          <span class="metric-unit">real-world coordinate output</span>
+        </div>
+      </div>
+      <div class="feature-visual">
+        <div class="map-mock" style="width:100%;height:180px;position:relative;">
+          <div class="map-point" style="top:40%;left:45%;"></div>
+          <div class="map-point" style="top:30%;left:60%;width:5px;height:5px;opacity:0.6;"></div>
+          <div class="map-point" style="top:60%;left:35%;width:4px;height:4px;opacity:0.4;"></div>
+          <div class="map-line" style="top:40%;left:35%;width:20%;transform:rotate(15deg);"></div>
+          <div class="map-line" style="top:35%;left:44%;width:18%;transform:rotate(-20deg);"></div>
+          <div style="position:absolute;bottom:8px;right:10px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:rgba(0,210,255,0.4);letter-spacing:1px;">LEAFLET · GPS PROJECTION</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="stack">
+  <div class="section-header reveal">
+    <div class="section-tag">Technical Stack</div>
+    <h2>Technologies Used</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="stack-categories">
+    <div class="reveal">
+      <div class="stack-category-label">Embedded &amp; System</div>
+      <div class="stack-pills">
+        <div class="stack-pill"><span class="pill-icon">⚙️</span>C Language</div>
+        <div class="stack-pill"><span class="pill-icon">🐧</span>Linux</div>
+        <div class="stack-pill"><span class="pill-icon">🍓</span>Raspberry Pi</div>
+        <div class="stack-pill"><span class="pill-icon">⚙️</span>Multi-Process</div>
+      </div>
+    </div>
+
+    <div class="reveal reveal-delay-1">
+      <div class="stack-category-label">AI &amp; Machine Learning</div>
+      <div class="stack-pills">
+        <div class="stack-pill"><span class="pill-icon">🐍</span>Python 3.9</div>
+        <div class="stack-pill"><span class="pill-icon">🔥</span>PyTorch</div>
+        <div class="stack-pill"><span class="pill-icon">🎯</span>YOLOv8</div>
+        <div class="stack-pill"><span class="pill-icon">🧮</span>NumPy</div>
+        <div class="stack-pill"><span class="pill-icon">📊</span>scikit-learn</div>
+        <div class="stack-pill"><span class="pill-icon">👁</span>OpenCV</div>
+      </div>
+    </div>
+
+    <div class="reveal reveal-delay-3">
+      <div class="stack-category-label">Sensors &amp; Hardware</div>
+      <div class="stack-pills">
+        <div class="stack-pill"><span class="pill-icon">📷</span>Pi Camera v2</div>
+        <div class="stack-pill"><span class="pill-icon">🔄</span>IMU (MPU-6050)</div>
+        <div class="stack-pill"><span class="pill-icon">📡</span>GPS Module</div>
+        <div class="stack-pill"><span class="pill-icon">🔗</span>JSONL Logging</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-header reveal">
+    <div class="section-tag">Project Overview</div>
+    <h2>About Visual Sentinel</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="about-layout">
+    <div class="about-text reveal">
+      <p>
+        <strong>Visual Sentinel</strong> is a graduation research project that addresses the growing challenge of drone detection and 3D localization in real-world environments. The system was designed from the ground up as an integrated hardware-software solution, operating fully at the edge without cloud dependencies.
+      </p>
+      <p>
+        The project consists of <strong>70 structured experiments</strong> producing <strong>140 stereo video pairs</strong>, each capturing a static drone at known height and depth coordinates under varying baselines and focal configurations. This dataset forms the backbone of the ML training pipeline.
+      </p>
+      <p>
+        An <strong>embedded orchestration system</strong> written in C coordinates dual Raspberry Pi units for synchronized acquisition, IMU sampling, and GPS logging. Detection is handled by a fine-tuned <strong>YOLOv8 model</strong>, with 3D estimation refined through a <strong>residual MLP regression network</strong> trained via 5-fold cross-validation.
+      </p>
+      <p>
+        The evaluation framework uses Leave-One-Out and K-Fold cross-validation to produce honest, leakage-free accuracy metrics. The final system achieves competitive H and D estimation accuracy across diverse geometric configurations.
+      </p>
+    </div>
+
+    <div class="about-metrics reveal reveal-delay-2">
+      <div class="about-metric">
+        <div class="am-val">70</div>
+        <div class="am-label">Structured Experiments</div>
+      </div>
+      <div class="about-metric">
+        <div class="am-val">140</div>
+        <div class="am-label">Stereo Video Pairs</div>
+      </div>
+      <div class="about-metric">
+        <div class="am-val">5K</div>
+        <div class="am-label">Training Samples</div>
+      </div>
+      <div class="about-metric">
+        <div class="am-val">3D</div>
+        <div class="am-label">Coordinate Output</div>
+      </div>
+      <div class="about-metric" style="grid-column:span 2;">
+        <div class="am-val" style="font-size:24px;">YOLOv8 + MLP</div>
+        <div class="am-label">Detection + Regression Architecture</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACKNOWLEDGMENT -->
+<section id="acknowledgment">
+  <div class="section-header reveal">
+    <div class="section-tag">Acknowledgment</div>
+    <h2>Special Thanks</h2>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="ack-layout">
+    <div class="ack-group reveal">
+      <div class="ack-group-title">Project Supervisors &amp; Contributors</div>
+      <div class="ack-people">
+        <div class="ack-person">
+          <span class="ack-name">Dr. Abdullah Alfarrarjeh</span>
+          <span class="ack-role">Project Supervisor</span>
+        </div>
+        <div class="ack-person">
+          <span class="ack-name">Dr. Amani Abu Jabal</span>
+          <span class="ack-role">Project Co-Supervisor</span>
+        </div>
+        <div class="ack-person">
+          <span class="ack-name">Osama Abbad</span>
+          <span class="ack-role">Technical Contributor</span>
+        </div>
+        <div class="ack-person">
+          <span class="ack-name">Mohammad Yasin</span>
+          <span class="ack-role">Technical Contributor</span>
+        </div>
+        <div class="ack-person">
+          <span class="ack-name">Muthanna AL-hawamdeh</span>
+          <span class="ack-role">Technical Contributor</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ack-group reveal reveal-delay-2">
+      <div class="ack-group-title">Supporting Organizations</div>
+      <div class="ack-orgs">
+        <div class="ack-org">
+          <div class="org-icon">🏢</div>
+          <div>
+            <div class="org-name">King Abdullah Financial District</div>
+            <div class="org-sub">KAFD · كافد · Field Experiment Site</div>
+          </div>
+        </div>
+        <div class="ack-org">
+          <div class="org-icon">🛡</div>
+          <div>
+            <div class="org-name">Jordan Design &amp; Development Bureau</div>
+            <div class="org-sub">JDDB · Technical Support &amp; Collaboration</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">◈ Visual Sentinel</div>
+  <div class="footer-copy">Graduation Project · 2025/2026 · AI Stereo Vision Drone Detection</div>
+</footer>
+
+<script>
+// ── Custom cursor ──────────────────────────────
+const cursor     = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursorRing');
+
+document.addEventListener('mousemove', e => {
+  cursor.style.left     = e.clientX + 'px';
+  cursor.style.top      = e.clientY + 'px';
+  cursorRing.style.left = e.clientX + 'px';
+  cursorRing.style.top  = e.clientY + 'px';
+});
+
+document.querySelectorAll('a, button, .arch-card, .stack-pill, .ack-org').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cursor.style.width     = '14px';
+    cursor.style.height    = '14px';
+    cursorRing.style.width = '48px';
+    cursorRing.style.height= '48px';
+  });
+  el.addEventListener('mouseleave', () => {
+    cursor.style.width     = '8px';
+    cursor.style.height    = '8px';
+    cursorRing.style.width = '32px';
+    cursorRing.style.height= '32px';
+  });
+});
+
+// ── Scroll reveal ──────────────────────────────
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+// ── Typing effect for hero terminal line ───────
+const termLine = document.querySelector('.terminal-line');
+if (termLine) {
+  const text = termLine.textContent;
+  termLine.textContent = '';
+  let i = 0;
+  const typeInterval = setInterval(() => {
+    termLine.textContent += text[i];
+    i++;
+    if (i >= text.length) clearInterval(typeInterval);
+  }, 28);
+}
+
+// ── Animate stat counters ──────────────────────
+const counters = document.querySelectorAll('.stat-value, .am-val');
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const el  = entry.target;
+      const end = parseInt(el.textContent);
+      if (!isNaN(end) && end > 1) {
+        let start = 0;
+        const duration = 1200;
+        const step = duration / 60;
+        const increment = end / 60;
+        const timer = setInterval(() => {
+          start += increment;
+          el.textContent = Math.min(Math.floor(start), end);
+          if (start >= end) {
+            el.textContent = end;
+            clearInterval(timer);
+          }
+        }, step);
+      }
+      counterObserver.unobserve(el);
+    }
+  });
+}, { threshold: 0.5 });
+
+counters.forEach(el => counterObserver.observe(el));
+
+// ── Nav scroll effect ──────────────────────────
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('nav');
+  if (window.scrollY > 80) {
+    nav.style.background = 'rgba(6,12,20,0.98)';
+  } else {
+    nav.style.background = 'linear-gradient(180deg, rgba(6,12,20,0.95) 0%, transparent 100%)';
+  }
+});
+
+
+/* ── PROJECT CHRONICLES: GLOBAL STATE ── */
+let chronIdx = 0;
+const mainVideo = document.getElementById('mainVideo');
+const speakerBadge = document.getElementById('speakerBadge');
+const dynamicTitle = document.getElementById('dynamicTitle');
+const dynamicDesc = document.getElementById('dynamicDesc');
+
+/* ── 1. TIMELINE CONFIGURATION ── */
+const videoTimelines = {
+  "WhatsApp Video 2026-02-24 at 12.44.30 AM.mp4": [
+    { start: 0, end: 14.9, title: "The Vision", speaker: "DR. AMANI ABU JABAL", desc: "Introduction to Visual Sentinel: replacing traditional radar with AI stereo vision." },
+    { start: 15, end: 33.9, title: "HARDWARE_LOG", speaker: "OSAMA ABBAD", desc: "Demonstrating the IMU orientation sensors and GPS integration for the dual monitoring units." },
+    { start: 34, end: 48.9, title: "SYSTEM_CORE", speaker: "HAMZA SALAMEH", desc: "Explaining the C-language orchestration and Linux environment used for Raspberry Pi management." },
+    { start: 49, end: 67.9, title: "FIELD_VALIDATION", speaker: "DR. ABDULLAH ALFARRARJEH", desc: "Executing 3D geometry algorithms at the KAFD site for real-time drone localization." },
+    { start: 68, end: 114.9, title: "PROJECT_CONCLUSION", speaker: "DR. AMANI ABU JABAL", desc: "Final acknowledgments for the Visual Sentinel research project." }
+  ]
+};
+
+/* ── 2. SPEAKER SYNC ENGINE ── */
+if (mainVideo) {
+  mainVideo.addEventListener('timeupdate', () => {
+    const fullPath = mainVideo.querySelector('source').src;
+    const fileName = decodeURIComponent(fullPath.split('/').pop());
+    const timeline = videoTimelines[fileName];
+
+    if (!timeline) return;
+
+    const currentTime = mainVideo.currentTime;
+
+    // A. 1:15 HARD CUTOFF (75 seconds)
+    // We use display: none to ensure it doesn't block the JDDB/KAFD logos
+    if (currentTime >= 75) {
+      speakerBadge.style.display = 'none';
+      return; 
+    } else {
+      speakerBadge.style.display = 'block'; 
+    }
+    console.log(`Current Time: ${currentTime.toFixed(2)}s`);
+
+    // B. Precise Segment Detection
+    // Using a more rigorous check to ensure Dr. Amani triggers at 1:07 (107s)
+    const activeSegment = timeline.find(seg => currentTime >= seg.start && currentTime <= seg.end);
+
+    if (activeSegment) {
+      dynamicTitle.innerText = activeSegment.title;
+      dynamicDesc.innerText = activeSegment.desc;
+      speakerBadge.innerText = `SPEAKER: ${activeSegment.speaker}`;
+      speakerBadge.classList.add('visible');
+    } else {
+      speakerBadge.classList.remove('visible');
+    }
+  });
+}
+
+/* ── 3. SLIDER NAVIGATION ── */
+function moveChronicle(dir) {
+  const cards = document.querySelectorAll('.chronicle-card');
+  const track = document.getElementById('chronicleTrack');
+  
+  if (!track || cards.length === 0) return;
+
+  cards[chronIdx].classList.remove('active');
+  chronIdx = (chronIdx + dir + cards.length) % cards.length;
+  cards[chronIdx].classList.add('active');
+  
+  track.style.transform = `translateX(-${chronIdx * 100}%)`;
+  
+  if (chronIdx !== 0 && mainVideo) {
+    mainVideo.pause();
+  }
+}
+
+</script>
+</body>
+</html>
