@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Visual Sentinel — EXPERIMENT ARCHIVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+
+  :root {
+  --bg:        #060c14;
+  --bg2:       #0a1628;
+  --bg3:       #0d1f35;
+  --border:    rgba(0,210,255,0.15);
+  --border2:   rgba(0,210,255,0.3);
+  --cyan:      #00d2ff;
+  --cyan2:     #00ffcc;
+  --amber:     #ffb300;
+  --red:       #ff4444;
+  --text:      #c8d8e8;
+  --text-dim:  #4a6070;
+  --text-muted:#2a3a4a;
+  --glow:      0 0 20px rgba(0,210,255,0.3);
+  --glow2:     0 0 40px rgba(0,210,255,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'IBM Plex Mono';
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+:root{--bg:#050a0f;--panel:#080e16;--border:#0f3a5a;--accent:#00d4ff;--accent2:#00ff88;--accent3:#ff6b35;--accent4:#ffd700;--accent5:#fc00ff;--text:#c8e8f8;--dim:#3a6070;--glow:0 0 20px rgba(0,212,255,.3);--glow2:0 0 20px rgba(0,255,136,.3)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.page{display:none;position:relative;z-index:1}.page.active{display:block}
+.container{max-width:1340px;margin:0 auto;padding:clamp(14px,4vw,30px) clamp(12px,4vw,24px)}
+header{text-align:center;margin-bottom:clamp(18px,4vw,36px)}
+.sys-label{font-family:'Orbitron',sans-serif;font-size:clamp(8px,1.5vw,10px);letter-spacing:6px;color:var(--accent);text-transform:uppercase;margin-bottom:8px;opacity:.7}
+h1{padding-top: 45px; font-family:'Orbitron',sans-serif;font-size:clamp(18px,5vw,40px);font-weight:900;letter-spacing:2px;color:#fff;text-shadow:0 0 40px rgba(0,212,255,.5);line-height:1.2}
+h1 span{color:var(--accent)}
+.subtitle{margin-top:8px;font-size:clamp(8px,1.5vw,11px);color:var(--dim);letter-spacing:3px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:clamp(14px,2.5vw,22px);position:relative;overflow:hidden}
+.panel::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.panel.orange::before{background:linear-gradient(90deg,transparent,var(--accent3),transparent)}
+.panel.gold::before{background:linear-gradient(90deg,transparent,var(--accent4),transparent)}
+.panel.green::before{background:linear-gradient(90deg,transparent,var(--accent5),transparent)}
+.panel.green2::before{background:linear-gradient(90deg,transparent,var(--accent2),transparent)}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:clamp(9px,1.4vw,11px);letter-spacing:3px;color:var(--accent);margin-bottom:clamp(10px,2vw,16px);text-transform:uppercase}
+.panel.orange .panel-title{color:var(--accent3)}.panel.gold .panel-title{color:var(--accent4)}.panel.green .panel-title{color:var(--accent5)}.panel.green2 .panel-title{color:var(--accent2)}
+.corner{position:absolute;width:10px;height:10px;border-color:var(--accent);border-style:solid}
+.corner.tl{top:5px;left:5px;border-width:1px 0 0 1px}.corner.tr{top:5px;right:5px;border-width:1px 1px 0 0}
+.corner.bl{bottom:5px;left:5px;border-width:0 0 1px 1px}.corner.br{bottom:5px;right:5px;border-width:0 1px 1px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:clamp(8px,1.5vw,11px) clamp(12px,2vw,20px);background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Orbitron',sans-serif;font-size:clamp(9px,1.3vw,11px);letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:3px;transition:all .2s;position:relative;overflow:hidden;text-decoration:none}
+.btn::before{content:'';position:absolute;inset:0;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .3s;z-index:0}
+.btn:hover::before,.btn:active::before{transform:scaleX(1)}.btn:hover,.btn:active{color:var(--bg)}.btn span{position:relative;z-index:1}
+.btn.orange{border-color:var(--accent3);color:var(--accent3)}.btn.orange::before{background:var(--accent3)}
+.btn.green{border-color:var(--accent5);color:var(--accent5)}.btn.green::before{background:var(--accent5)}
+.btn.full{width:100%;margin-top:6px}
+.field{margin-bottom:clamp(10px,2vw,14px)}
+label{display:block;font-size:10px;letter-spacing:2px;color:var(--dim);margin-bottom:4px;text-transform:uppercase}
+label span{color:var(--accent);font-size:13px}
+input[type="number"],input[type="text"]{width:100%;background:rgba(0,20,35,.8);border:1px solid var(--border);border-radius:3px;color:var(--accent2);font-family:'Share Tech Mono',monospace;font-size:clamp(13px,2vw,16px);padding:clamp(7px,1.2vw,10px) clamp(10px,1.5vw,12px);outline:none;transition:border-color .2s,box-shadow .2s}
+input:focus{border-color:var(--accent);box-shadow:var(--glow)}
+input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{display:none}input[type="number"]{-moz-appearance:textfield}
+.unit-hint{font-size:9px;color:var(--dim);margin-top:3px}
+.section-title{font-family:'Orbitron',sans-serif;font-size:clamp(10px,1.6vw,13px);letter-spacing:5px;color:var(--accent);text-transform:uppercase;margin:clamp(18px,3vw,28px) 0 clamp(10px,2vw,16px);padding-bottom:8px;border-bottom:1px solid var(--border);opacity:.8}
+.filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:12px;margin-bottom:14px}
+.filter-input{display:flex;gap:4px;align-items:center}.filter-input input{flex:1;padding:5px 8px;font-size:12px}
+#exp-table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:clamp(11px,1.5vw,13px)}
+thead tr{border-bottom:2px solid var(--border);font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+thead th{padding:10px 12px;text-align:left}
+tbody tr{border-bottom:1px solid rgba(15,58,90,.5);transition:background .15s}
+tbody tr:hover{background:rgba(0,212,255,.04)}
+tbody td{padding:9px 12px;vertical-align:middle}
+.exp-num{color:var(--accent);font-family:'Orbitron',sans-serif;font-weight:700;font-size:14px}
+.param-badge{display:inline-block;border-radius:2px;padding:2px 7px;font-size:10px;letter-spacing:1px;margin:2px}
+.param-badge.B{color:var(--accent);border:1px solid rgba(0,212,255,.3);background:rgba(0,212,255,.07)}
+.param-badge.H{color:var(--accent2);border:1px solid rgba(0,255,136,.3);background:rgba(0,255,136,.07)}
+.param-badge.D{color:var(--accent3);border:1px solid rgba(255,107,53,.3);background:rgba(255,107,53,.07)}
+.param-badge.F{color:var(--accent4);border:1px solid rgba(255,215,0,.3);background:rgba(255,215,0,.07)}
+.empty-msg{text-align:center;padding:40px;color:var(--dim);font-size:13px}
+.back-btn{display:inline-flex;align-items:center;gap:8px;color:var(--accent);font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;margin-bottom:20px;background:none;border:none;font-family:'Orbitron',sans-serif;transition:opacity .2s}
+.back-btn:hover{opacity:.7}
+.video-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:640px){.video-row{grid-template-columns:1fr}}
+.vlabel{display:block;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:3px;color:var(--accent);margin-bottom:8px;text-transform:uppercase}
+.vlabel.right{color:var(--accent3)}.vlabel.det{color:var(--accent5)}
+video{width:100%;border-radius:4px;border:1px solid var(--border);background:#000;max-height:320px;display:block}
+.video-no{width:100%;height:180px;border:1px solid var(--border);border-radius:4px;background:#000;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:11px;letter-spacing:2px;text-align:center;padding:10px;flex-direction:column;gap:6px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}.three-col{grid-template-columns:1fr 1fr}}
+@media(max-width:540px){.three-col{grid-template-columns:1fr}}
+.imu-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(15,58,90,.5);gap:8px}
+.imu-row:last-child{border-bottom:none}
+.imu-name{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+.imu-val{font-size:clamp(15px,2.5vw,20px);font-weight:bold}.imu-unit{font-size:9px;color:var(--dim);margin-left:2px}
+.imu-left .imu-val{color:var(--accent2)}.imu-right .imu-val{color:var(--accent3)}
+.loc-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(15,58,90,.5);gap:6px;flex-wrap:wrap}
+.loc-row:last-child{border-bottom:none}
+.loc-key{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;flex-shrink:0;padding-top:2px}
+.loc-val{font-size:clamp(11px,1.8vw,14px);font-weight:bold;text-align:right;white-space:nowrap}
+.loc-val.blue{color:var(--accent)}.loc-val.orange{color:var(--accent3)}.loc-val.gold{color:var(--accent4)}.loc-val.green{color:var(--accent5)}
+.gmaps-btn{display:block;width:100%;margin-top:10px;padding:7px;background:transparent;border:1px solid currentColor;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;text-decoration:none;text-align:center;transition:background .2s}
+.gmaps-btn:hover{background:rgba(255,255,255,.06)}
+.viz{display:block;width:100%;height:clamp(280px,40vw,480px);border:1px solid var(--border);border-radius:3px}
+#leaflet-map2{width:100%;height:clamp(320px,45vw,480px);border:1px solid var(--border);border-radius:4px}
+.map-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:10px;color:var(--dim);letter-spacing:1px}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.error-msg{background:rgba(255,50,50,.1);border:1px solid rgba(255,50,50,.4);border-radius:3px;padding:8px 12px;font-size:11px;color:#ff6060;letter-spacing:1px;margin-top:8px;display:none;line-height:1.4}
+.gps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px}
+
+/* ── INIT LOADING / ERROR ── */
+#init-loading{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+#init-loading .spinner{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+#init-loading .load-label{font-family:'Orbitron',sans-serif;font-size:11px;letter-spacing:4px;color:var(--accent);text-transform:uppercase}
+#init-loading .load-sub{font-size:10px;color:var(--dim);letter-spacing:2px;max-width:340px;text-align:center;line-height:1.8}
+#init-loading .load-prog{font-size:10px;color:var(--accent2);letter-spacing:1px}
+#init-error{position:fixed;inset:0;background:var(--bg);z-index:9998;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center}
+#init-error .err-title{font-family:'Orbitron',sans-serif;font-size:14px;letter-spacing:3px;color:#ff4466}
+#init-error .err-msg{font-size:12px;color:var(--dim);max-width:480px;line-height:1.8;white-space:pre-line}
+
+.source-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:3px;padding:6px 14px;font-size:10px;letter-spacing:2px;color:var(--accent);margin-bottom:20px}
+.source-badge a{color:var(--accent2);text-decoration:none}.source-badge a:hover{text-decoration:underline}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+footer{text-align:center;font-size:9px;color:var(--dim);letter-spacing:3px;padding:20px 0;opacity:.4;margin-top:30px}
+
+.chart-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.chart-tab{padding:6px 16px;background:transparent;border:1px solid var(--border);color:var(--dim);font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border-radius:2px;transition:all .2s}
+.chart-tab.active,.chart-tab:hover{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.07)}
+.chart-tab.B.active,.chart-tab.B:hover{border-color:var(--accent);color:var(--accent)}
+.chart-tab.H.active,.chart-tab.H:hover{border-color:var(--accent2);color:var(--accent2)}
+.chart-tab.D.active,.chart-tab.D:hover{border-color:var(--accent3);color:var(--accent3)}
+.chart-tab.F.active,.chart-tab.F:hover{border-color:var(--accent4);color:var(--accent4)}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:780px){.chart-grid{grid-template-columns:1fr}}
+.chart-canvas-wrap{position:relative;height:240px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:10px;margin-bottom:14px}
+.info-cell{background:rgba(0,20,40,.6);border:1px solid var(--border);border-radius:3px;padding:10px 12px}
+.info-cell-label{font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:4px}
+.info-cell-val{font-size:13px;font-weight:bold;color:#fff;word-break:break-word}
+.info-cell-val.ok{color:var(--accent2)}.info-cell-val.warn{color:var(--accent4)}.info-cell-val.err{color:#ff4466}
+.det-banner{background:rgba(252,0,255,.07);border:1px solid rgba(252,0,255,.3);border-radius:4px;padding:12px 16px;margin-bottom:16px;font-size:12px;letter-spacing:2px;color:var(--accent5);text-transform:uppercase;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.leaflet-popup-content-wrapper{background:#0a1622;border:1px solid #0f3a5a;color:#c8e8f8;border-radius:4px;font-family:'Share Tech Mono',monospace;font-size:12px}
+.leaflet-popup-tip{background:#0a1622}.leaflet-popup-content{line-height:1.8}
+
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  padding: 20px 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(180deg, rgba(6,12,20,0.95) 0%, transparent 100%);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 3px; color: var(--cyan);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-logo::before {
+  content: '◈';
+  font-size: 18px;
+  animation: pulse-logo 2s ease-in-out infinite;
+}
+@keyframes pulse-logo {
+  0%,100% { opacity:1; text-shadow: 0 0 10px var(--cyan); }
+  50% { opacity:0.6; text-shadow: none; }
+}
+.nav-links {
+  display: flex; gap: 40px; list-style: none;
+}
+.nav-links a {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-weight: 400;
+  letter-spacing: 2px; color: var(--text-dim);
+  text-decoration: none; text-transform: uppercase;
+  transition: color 0.2s;
+  position: relative;
+}
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -4px; left: 0;
+  width: 0; height: 1px; background: var(--cyan);
+  transition: width 0.3s;
+}
+.nav-links a:hover { color: var(--cyan); }
+.nav-links a:hover::after { width: 100%; }
+.nav-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2px; color: var(--text-muted);
+}
+
+.cursor {
+  position: fixed; width: 8px; height: 8px;
+  background: var(--cyan); border-radius: 50%;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s, width 0.2s, height 0.2s;
+  mix-blend-mode: screen;
+}
+.cursor-ring {
+  position: fixed; width: 32px; height: 32px;
+  border: 1px solid rgba(0,210,255,0.5);
+  border-radius: 50%; pointer-events: none; z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s ease-out, width 0.3s, height 0.3s;
+}
+
+/* ── FOOTER ─────────────────────────────────────── */
+footer {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 32px 60px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.footer-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 3px; color: var(--text-dim);
+}
+.footer-copy {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: var(--text-muted);
+}
+
+</style>
+</head>
+<body>
+
+  <!-- Custom cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Visual Sentinel</div>
+  <ul class="nav-links">
+    <li><a href="#dashboard">Dashboard</a></li>
+  </ul>
+  <div class="nav-tag">Graduation Project // 2025/2026</div>
+</nav>
+
+<div id="init-loading">
+  <div class="spinner"></div>
+  <div class="load-label">Loading Experiments</div>
+  <div class="load-sub">Fetching data from GitHub<br><span style="color:var(--accent);opacity:.7">Hamza928505 / Visual-Sentinel / Experments</span></div>
+  <div class="load-prog" id="load-prog">Scanning repository tree…</div>
+</div>
+
+<div id="init-error">
+  <div style="font-size:36px">⚠</div>
+  <div class="err-title">Failed to Load</div>
+  <div class="err-msg" id="init-err-msg"></div>
+  <button class="btn" onclick="initLoad()" style="margin-top:8px"><span>↺ RETRY</span></button>
+</div>
+
+<!-- PAGE 1 -->
+<div id="page-main" class="page active">
+<div class="container">
+  <header>
+    <h1>EXPERIMENT <span>ARCHIVE</span></h1>
+    <div class="subtitle">DUAL CAMERA &nbsp;•&nbsp; IMU DATA &nbsp;•&nbsp; STATISTICS &nbsp;•&nbsp; DETECTION PIPELINE</div>
+  </header>
+
+  <div style="text-align:center;margin-bottom:20px">
+    <span class="source-badge">◈ SOURCE &nbsp;
+      <a href="https://github.com/Hamza928505/Visual-Sentinel/tree/main/Experments" target="_blank">github.com / Hamza928505 / Visual-Sentinel</a>
+      &nbsp;<span id="exp-count-badge" style="color:var(--dim)"></span>
+    </span>
+  </div>
+
+  <div id="charts-section" style="display:none">
+    <div class="section-title">▸ 01 — Experiment Statistics</div>
+    <div class="chart-tabs">
+      <button class="chart-tab active" data-view="all" onclick="showChartView('all')">▦ ALL PARAMS</button>
+      <button class="chart-tab B" data-view="B" onclick="showChartView('B')">BASELINE</button>
+      <button class="chart-tab H" data-view="H" onclick="showChartView('H')">HEIGHT</button>
+      <button class="chart-tab D" data-view="D" onclick="showChartView('D')">DEPTH</button>
+      <button class="chart-tab F" data-view="F" onclick="showChartView('F')">FOCAL</button>
+    </div>
+    <div id="chart-all" class="chart-grid">
+      <div class="panel"><div class="panel-title" style="color:var(--accent)">▸ Baseline (m)</div><div class="chart-canvas-wrap"><canvas id="cB"></canvas></div></div>
+      <div class="panel green2"><div class="panel-title" style="color:var(--accent2)">▸ Height (m)</div><div class="chart-canvas-wrap"><canvas id="cH"></canvas></div></div>
+      <div class="panel orange"><div class="panel-title" style="color:var(--accent3)">▸ Depth (m)</div><div class="chart-canvas-wrap"><canvas id="cD"></canvas></div></div>
+      <div class="panel gold"><div class="panel-title" style="color:var(--accent4)">▸ Focal Length (mm)</div><div class="chart-canvas-wrap"><canvas id="cF"></canvas></div></div>
+    </div>
+    <div id="chart-single" style="display:none;margin-bottom:20px">
+      <div class="panel"><div class="panel-title" id="single-title">▸ Distribution</div><div class="chart-canvas-wrap" style="height:340px"><canvas id="cSingle"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="panel" id="filter-panel" style="display:none;margin-bottom:16px">
+    <div class="panel-title">▸ Filter Experiments</div>
+    <div class="filters-grid">
+      <div><div class="param-badge B" style="margin-bottom:6px">Baseline B (m)</div><div class="filter-input"><input type="number" id="flt-b-min" placeholder="Min" oninput="applyFilters()"><span style="color:var(--dim)">—</span><input type="number" id="flt-b-max" placeholder="Max" oninput="applyFilters()"></div></div>
+      <div><div class="param-badge H" style="margin-bottom:6px">Height H (m)</div><div class="filter-input"><input type="number" id="flt-h-min" placeholder="Min" oninput="applyFilters()"><span style="color:var(--dim)">—</span><input type="number" id="flt-h-max" placeholder="Max" oninput="applyFilters()"></div></div>
+      <div><div class="param-badge D" style="margin-bottom:6px">Depth D (m)</div><div class="filter-input"><input type="number" id="flt-d-min" placeholder="Min" oninput="applyFilters()"><span style="color:var(--dim)">—</span><input type="number" id="flt-d-max" placeholder="Max" oninput="applyFilters()"></div></div>
+      <div><div class="param-badge F" style="margin-bottom:6px">Focal F (mm)</div><div class="filter-input"><input type="number" id="flt-f-min" placeholder="Min" oninput="applyFilters()"><span style="color:var(--dim)">—</span><input type="number" id="flt-f-max" placeholder="Max" oninput="applyFilters()"></div></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <input type="text" id="flt-search" placeholder="Free search: EXP name, params…" style="flex:1;min-width:200px;font-size:13px" oninput="applyFilters()">
+      <button class="btn" onclick="clearFilters()"><span>✕ CLEAR</span></button>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--dim)" id="filter-count"></div>
+  </div>
+
+  <div class="section-title" id="table-stitle" style="display:none">▸ 02 — Experiment List</div>
+  <div class="panel" id="table-panel" style="display:none">
+    <div id="exp-table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>EXP</th><th>Configuration</th><th>Pi-01 IMU</th><th>Pi-02 IMU</th><th>Calc H</th><th>Calc D</th><th>Error H</th><th>Error D</th><th>Videos</th><th>Issue</th><th>Date</th><th>Action</th></tr></thead>
+        <tbody id="exp-tbody"></tbody>
+      </table>
+      <div class="empty-msg" id="empty-msg" style="display:none">No experiments match the current filters.</div>
+    </div>
+  </div>
+</div>
+  <!-- FOOTER -->
+<footer>
+  <div class="footer-logo">◈ Visual Sentinel</div>
+  <div class="footer-copy">Graduation Project · 2025/2026 · AI Stereo Vision Drone Detection</div>
+</footer>
+</div>
+
+<!-- PAGE 2 -->
+<div id="page-detect" class="page">
+<div class="container">
+  <button class="back-btn" onclick="goBack()">◀ &nbsp;BACK TO EXPERIMENTS</button>
+  <header style="margin-bottom:20px">
+    <div class="sys-label">detection analysis</div>
+    <h1 id="det-title">EXP <span>–</span></h1>
+    <div class="subtitle" id="det-subtitle">–</div>
+  </header>
+
+  <div id="expinfo-panel" class="panel green2" style="display:none;margin-bottom:16px">
+    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="panel-title">▸ Experiment Info — exp_info.json</div>
+    <div class="info-grid" id="expinfo-grid"></div>
+  </div>
+
+  <div class="det-banner" id="det-banner" style="display:none">
+    <span style="width:8px;height:8px;border-radius:50%;background:var(--accent5);display:inline-block;flex-shrink:0;animation:pulse 1.5s ease-in-out infinite"></span>
+    <span>DETECTED DRONE DATA LOADED FROM exp_info.json</span>
+    <span id="det-coords" style="color:#fff;margin-left:auto">—</span>
+  </div>
+
+  <div class="panel green" style="margin-bottom:16px">
+    <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="panel-title">▸ Detected Drone Parameters</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:12px;margin-bottom:12px">
+      <div class="field" style="margin-bottom:0"><label>Detected Height <span style="color:var(--accent5)">H_det</span></label><input type="number" id="det-h" step="0.001" placeholder="m" oninput="onDetChange()"><div class="unit-hint">meters above camera plane</div></div>
+      <div class="field" style="margin-bottom:0"><label>Detected Depth <span style="color:var(--accent5)">Z_det</span></label><input type="number" id="det-z" step="0.001" placeholder="m" oninput="onDetChange()"><div class="unit-hint">meters forward</div></div>
+      <div class="field" style="margin-bottom:0"><label>Detected Lateral <span style="color:var(--accent5)">X_det</span></label><input type="number" id="det-x" step="0.001" value="0" oninput="onDetChange()"><div class="unit-hint">meters lateral</div></div>
+      <div class="field" style="margin-bottom:0"><label>Detected Lat <span style="color:var(--accent5)">lat</span></label><input type="number" id="det-lat" step="0.0000001" placeholder="°" oninput="onDetChange()"><div class="unit-hint">decimal degrees</div></div>
+      <div class="field" style="margin-bottom:0"><label>Detected Lon <span style="color:var(--accent5)">lon</span></label><input type="number" id="det-lon" step="0.0000001" placeholder="°" oninput="onDetChange()"><div class="unit-hint">decimal degrees</div></div>
+    </div>
+    <button class="btn green full" onclick="onDetChange()"><span>▶ UPDATE DETECTION OVERLAY</span></button>
+  </div>
+
+  <div class="section-title">▸ 01 — Stereo Video Feed (Raw)</div>
+  <div class="video-row">
+    <div><span class="vlabel">◈ Pi-01 — LEFT CAMERA</span><video id="vL" controls></video><div id="vL-none" class="video-no" style="display:none">NO VIDEO FILE</div></div>
+    <div><span class="vlabel right">◈ Pi-02 — RIGHT CAMERA</span><video id="vR" controls></video><div id="vR-none" class="video-no" style="display:none">NO VIDEO FILE</div></div>
+  </div>
+  <div class="section-title">▸ 02 — Detected Video Feed</div>
+  <div class="video-row">
+    <div><span class="vlabel det">◈ Pi-01 — LEFT DETECTED</span><video id="vDL" controls></video><div id="vDL-none" class="video-no" style="display:none"><span>NO DETECTED VIDEO</span></div></div>
+    <div><span class="vlabel det">◈ Pi-02 — RIGHT DETECTED</span><video id="vDR" controls></video><div id="vDR-none" class="video-no" style="display:none"><span>NO DETECTED VIDEO</span></div></div>
+  </div>
+
+  <div class="section-title">▸ 03 — Stereo Geometry Visualization</div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-title">▸ Original (White ⊕) vs Detected (Pink ⊕)</div>
+    <canvas class="viz" id="viz2"></canvas>
+  </div>
+
+  <div class="section-title">▸ 04 — IMU Attitude Data</div>
+  <div class="two-col">
+    <div class="panel imu-left"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="panel-title">◈ CAMERA LEFT (Pi-01) — IMU</div>
+      <div class="imu-row"><div class="imu-name">Yaw</div><div><span class="imu-val" id="L_yaw">—</span><span class="imu-unit">°</span></div></div>
+      <div class="imu-row"><div class="imu-name">Pitch</div><div><span class="imu-val" id="L_pitch">—</span><span class="imu-unit">°</span></div></div>
+      <div class="imu-row"><div class="imu-name">Roll</div><div><span class="imu-val" id="L_roll">—</span><span class="imu-unit">°</span></div></div>
+      <div class="imu-row"><div class="imu-name">Slant Range</div><div><span class="imu-val" id="L_range">—</span><span class="imu-unit">m</span></div></div>
+    </div>
+    <div class="panel orange imu-right"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="panel-title">◈ CAMERA RIGHT (Pi-02) — IMU</div>
+      <div class="imu-row"><div class="imu-name">Yaw</div><div><span class="imu-val" id="R_yaw">—</span><span class="imu-unit">°</span></div></div>
+      <div class="imu-row"><div class="imu-name">Pitch</div><div><span class="imu-val" id="R_pitch">—</span><span class="imu-unit">°</span></div></div>
+      <div class="imu-row"><div class="imu-name">Roll</div><div><span class="imu-val" id="R_roll">—</span><span class="imu-unit">°</span></div></div>
+      <div class="imu-row"><div class="imu-name">Slant Range</div><div><span class="imu-val" id="R_range">—</span><span class="imu-unit">m</span></div></div>
+    </div>
+  </div>
+
+  <div class="section-title">▸ 05 — System Configuration</div>
+  <div class="panel" style="margin-bottom:16px"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="panel-title">▸ Experiment Parameters</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:16px">
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Baseline B</div><span id="cfg-B" style="color:var(--accent);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> m</span></div>
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Height H</div><span id="cfg-H" style="color:var(--accent2);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> m</span></div>
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Depth D</div><span id="cfg-D" style="color:var(--accent3);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> m</span></div>
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Focal F</div><span id="cfg-F" style="color:var(--accent4);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> mm</span></div>
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Pi-01 Yaw</div><span id="cfg-pi1-yaw" style="color:var(--accent2);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> °</span></div>
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Pi-01 Pitch</div><span id="cfg-pi1-pitch" style="color:var(--accent2);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> °</span></div>
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Pi-02 Yaw</div><span id="cfg-pi2-yaw" style="color:var(--accent3);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> °</span></div>
+      <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Pi-02 Pitch</div><span id="cfg-pi2-pitch" style="color:var(--accent3);font-size:20px;font-weight:bold">—</span><span style="color:var(--dim);font-size:10px"> °</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">▸ 06 — GPS Location</div>
+  <div class="panel" style="margin-bottom:16px"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="panel-title">▸ Baseline Center GPS &amp; Orientation</div>
+    <div class="gps-grid">
+      <div class="field" style="margin-bottom:0"><label>Center Latitude <span>φ</span></label><input type="number" id="gps-lat" value="31.9700" step="0.000001" oninput="calcGPS()"><div class="unit-hint">decimal degrees</div></div>
+      <div class="field" style="margin-bottom:0"><label>Center Longitude <span>λ</span></label><input type="number" id="gps-lon" value="35.2100" step="0.000001" oninput="calcGPS()"><div class="unit-hint">decimal degrees</div></div>
+      <div class="field" style="margin-bottom:0"><label>Altitude <span>Alt</span></label><input type="number" id="gps-alt" value="800" step="1" oninput="calcGPS()"><div class="unit-hint">meters ASL</div></div>
+      <div class="field" style="margin-bottom:0"><label>Heading <span>θ</span></label><input type="number" id="gps-heading" value="0" step="1" oninput="calcGPS()"><div class="unit-hint">0=North, 90=East</div></div>
+    </div>
+    <div id="gps-error" class="error-msg"></div>
+  </div>
+
+  <div class="three-col" style="margin-bottom:10px">
+    <div class="panel"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="panel-title">◈ Camera Left — GPS</div>
+      <div class="loc-row"><div class="loc-key">Latitude</div><div class="loc-val blue" id="cl-lat">—</div></div>
+      <div class="loc-row"><div class="loc-key">Longitude</div><div class="loc-val blue" id="cl-lon">—</div></div>
+      <div class="loc-row"><div class="loc-key">Altitude</div><div class="loc-val blue" id="cl-alt">—</div></div>
+      <a class="gmaps-btn" id="cl-gmaps" href="#" target="_blank" style="color:var(--accent)">↗ Google Maps</a>
+    </div>
+    <div class="panel orange"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="panel-title">◈ Camera Right — GPS</div>
+      <div class="loc-row"><div class="loc-key">Latitude</div><div class="loc-val orange" id="cr-lat">—</div></div>
+      <div class="loc-row"><div class="loc-key">Longitude</div><div class="loc-val orange" id="cr-lon">—</div></div>
+      <div class="loc-row"><div class="loc-key">Altitude</div><div class="loc-val orange" id="cr-alt">—</div></div>
+      <a class="gmaps-btn" id="cr-gmaps" href="#" target="_blank" style="color:var(--accent3)">↗ Google Maps</a>
+    </div>
+    <div class="panel gold"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="panel-title">⊕ Original Drone — GPS</div>
+      <div class="loc-row"><div class="loc-key">Latitude</div><div class="loc-val gold" id="dr-lat">—</div></div>
+      <div class="loc-row"><div class="loc-key">Longitude</div><div class="loc-val gold" id="dr-lon">—</div></div>
+      <div class="loc-row"><div class="loc-key">Altitude</div><div class="loc-val gold" id="dr-alt">—</div></div>
+      <a class="gmaps-btn" id="dr-gmaps" href="#" target="_blank" style="color:var(--accent4)">↗ Google Maps</a>
+    </div>
+  </div>
+  <div class="panel green" style="margin-bottom:16px;max-width:420px"><div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+    <div class="panel-title">⊕ Detected Drone — GPS</div>
+    <div class="loc-row"><div class="loc-key">Latitude</div><div class="loc-val green" id="dd-lat">—</div></div>
+    <div class="loc-row"><div class="loc-key">Longitude</div><div class="loc-val green" id="dd-lon">—</div></div>
+    <div class="loc-row"><div class="loc-key">Altitude</div><div class="loc-val green" id="dd-alt">—</div></div>
+    <a class="gmaps-btn" id="dd-gmaps" href="#" target="_blank" style="color:var(--accent5)">↗ Google Maps</a>
+  </div>
+
+  <div class="section-title">▸ 07 — Live Map View</div>
+  <div class="panel" style="margin-bottom:16px">
+    <div class="panel-title">▸ Camera &amp; Drone Positions</div>
+    <div id="leaflet-map2"></div>
+    <div class="map-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div><span>Camera Left</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6b35"></div><span>Camera Right</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div><span>Original Drone</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fc00ff"></div><span>Detected Drone</span></div>
+      <div class="legend-item" style="margin-left:auto"><a id="gmaps-all" href="#" target="_blank" style="color:var(--accent);font-size:10px;letter-spacing:2px;text-transform:uppercase;text-decoration:none">↗ View All</a></div>
+    </div>
+  </div>
+
+</div>
+
+  <!-- FOOTER -->
+<footer>
+  <div class="footer-logo">◈ Visual Sentinel</div>
+  <div class="footer-copy">Graduation Project · 2025/2026 · AI Stereo Vision Drone Detection</div>
+</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+
+const cursor     = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursorRing');
+
+document.addEventListener('mousemove', e => {
+  cursor.style.left     = e.clientX + 'px';
+  cursor.style.top      = e.clientY + 'px';
+  cursorRing.style.left = e.clientX + 'px';
+  cursorRing.style.top  = e.clientY + 'px';
+});
+
+document.querySelectorAll('a, button, .arch-card, .stack-pill, .ack-org').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cursor.style.width     = '14px';
+    cursor.style.height    = '14px';
+    cursorRing.style.width = '48px';
+    cursorRing.style.height= '48px';
+  });
+  el.addEventListener('mouseleave', () => {
+    cursor.style.width     = '8px';
+    cursor.style.height    = '8px';
+    cursorRing.style.width = '32px';
+    cursorRing.style.height= '32px';
+  });
+});
+
+const DEG=180/Math.PI,RAD=Math.PI/180,RE=6378137;
+let allExp=[],filtExp=[],curExp=null,lmap=null,mlayers={},chartInst={},chartView='all';
+
+/* ════ GITHUB CONFIG ════ */
+const GH_OWNER='Hamza928505', GH_REPO='Visual-Sentinel', GH_BRANCH='main', GH_FOLDER='Experments';
+const RAW=`https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}`;
+const API=`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`;
+
+async function ghJSON(url){const r=await fetch(url,{headers:{'Accept':'application/vnd.github+json'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();}
+async function ghText(url){const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status}: ${url}`);return r.text();}
+
+/* ════ INIT ════ */
+async function initLoad(){
+  const ld=document.getElementById('init-loading'),er=document.getElementById('init-error'),pg=document.getElementById('load-prog');
+  ld.style.display='flex'; er.style.display='none';
+  try{
+    pg.textContent='Fetching repository tree…';
+    const td=await ghJSON(`${API}/git/trees/${GH_BRANCH}?recursive=1`);
+    const tree=td.tree;
+
+    /* Build file index */
+    const fi={};
+    tree.filter(n=>n.type==='blob').forEach(n=>{fi[n.path]=n;});
+
+    /* Distinct EXP dirs */
+    const expNames=[...new Set(
+      tree.filter(n=>n.type==='blob'&&n.path.startsWith(GH_FOLDER+'/'))
+          .map(n=>n.path.split('/')[1])
+          .filter(n=>n&&n.toUpperCase().startsWith('EXP'))
+    )].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+
+    pg.textContent=`Found ${expNames.length} experiments — loading data…`;
+
+    let done=0;
+    const tasks=expNames.map(async name=>{
+      const base=`${GH_FOLDER}/${name}`;
+      const exp={expName:name,params:parseP(name),expInfo:null,
+        pi01:{imu:null,vidUrl:null,detVidUrl:null},
+        pi02:{imu:null,vidUrl:null,detVidUrl:null},
+        status:'ok',errors:[]};
+
+      /* exp_info.json */
+      const ip=`${base}/exp_info.json`;
+      if(fi[ip]){
+        try{
+          const t=await ghText(`${RAW}/${ip}`);
+          exp.expInfo=JSON.parse(t);
+          const ei=exp.expInfo;
+          if(ei.Baseline)        exp.params.B=parseFloat(ei.Baseline);
+          if(ei.Height)          exp.params.H=parseFloat(ei.Height);
+          if(ei.Depth)           exp.params.D=parseFloat(ei.Depth);
+          if(ei['Focal Length']) exp.params.F=parseFloat(ei['Focal Length']);
+        }catch(e){exp.errors.push('exp_info parse error');}
+      }else{exp.errors.push('no exp_info.json');}
+
+      /* pi01 / pi02 */
+      for(const pk of['pi01','pi02']){
+        const pp=`${base}/${pk}/`;
+        /* IMU */
+        const imuP=`${pp}IMUProcessed.txt`;
+        if(fi[imuP]){try{exp[pk].imu=parseIMU(await ghText(`${RAW}/${imuP}`));}
+          catch(e){exp.errors.push(`${pk} IMU error`);exp.status='warn';}}
+        else{exp.errors.push(`${pk} no IMU`);exp.status='warn';}
+        /* Videos */
+        const piFiles=tree.filter(n=>n.type==='blob'&&n.path.startsWith(pp));
+        const raw=piFiles.find(n=>{const r2=n.path.slice(pp.length);return!r2.includes('/')&&r2.toLowerCase().endsWith('.mp4')&&!r2.toLowerCase().includes('detected');});
+        if(raw) exp[pk].vidUrl=`${RAW}/${raw.path}`;
+        const det=piFiles.find(n=>{const r2=n.path.slice(pp.length),parts=r2.split('/');return parts.length===2&&parts[0].toLowerCase().includes('detected')&&parts[1].toLowerCase().endsWith('.mp4');});
+        if(det) exp[pk].detVidUrl=`${RAW}/${det.path}`;
+      }
+      if(!exp.pi01.imu&&!exp.pi02.imu) exp.status='err';
+      pg.textContent=`Loading… ${++done} / ${expNames.length}`;
+      return exp;
+    });
+
+    const res=await Promise.allSettled(tasks);
+    allExp=res.filter(r=>r.status==='fulfilled').map(r=>r.value)
+             .sort((a,b)=>a.expName.localeCompare(b.expName,undefined,{numeric:true}));
+
+    ld.style.display='none';
+    document.getElementById('exp-count-badge').textContent=`— ${allExp.length} experiments`;
+    buildCharts(allExp); renderTable(allExp);
+    ['charts-section','filter-panel','table-panel','table-stitle'].forEach(id=>document.getElementById(id).style.display='block');
+  }catch(e){
+    ld.style.display='none'; er.style.display='flex';
+    document.getElementById('init-err-msg').textContent=`Could not load from GitHub:\n${e.message}\n\nMake sure the repository is public and accessible.`;
+    console.error(e);
+  }
+}
+
+/* ════ PARSE ════ */
+function parseP(s){const m=k=>{const r=s.match(new RegExp(k+'(\\d+(?:\\.\\d+)?)','i'));return r?parseFloat(r[1]):null;};return{B:m('B'),H:m('H'),D:m('D'),F:m('F'),raw:s};}
+function parseIMU(t){try{const o=JSON.parse(t);if(typeof o.yaw!=='undefined')return o;}catch(e){}const y=t.match(/"yaw"\s*:\s*([-\d.]+)/i),p=t.match(/"pitch"\s*:\s*([-\d.]+)/i),r=t.match(/"roll"\s*:\s*([-\d.]+)/i);if(y)return{yaw:parseFloat(y[1]),pitch:p?parseFloat(p[1]):0,roll:r?parseFloat(r[1]):0};return null;}
+function cfgName(p){const a=[];['B','H','D','F'].forEach(k=>{if(p[k]!=null)a.push(k+p[k]);});return a.length?a.join(''):'—';}
+
+/* ════ CHART ════ */
+const CC={B:{bar:'rgba(0,212,255,.8)',border:'#00d4ff'},H:{bar:'rgba(0,255,136,.8)',border:'#00ff88'},D:{bar:'rgba(255,107,53,.8)',border:'#ff6b35'},F:{bar:'rgba(255,215,0,.8)',border:'#ffd700'}};
+function countBy(exps,k){const c={};exps.forEach(e=>{const v=e.params[k];if(v==null)return;const l=`${k}=${v}`;c[l]=(c[l]||0)+1;});return Object.entries(c).sort((a,b)=>parseFloat(a[0].split('=')[1])-parseFloat(b[0].split('=')[1]));}
+function makeChartCfg(entries,k,fs=11){const labels=entries.map(e=>e[0]),data=entries.map(e=>e[1]),c=CC[k];return{type:'bar',data:{labels,datasets:[{label:'Experiments',data,backgroundColor:c.bar,borderColor:c.border,borderWidth:1.5,borderRadius:4,hoverBackgroundColor:c.border}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:700,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(5,10,15,.95)',borderColor:c.border,borderWidth:1,titleColor:c.border,bodyColor:'#c8e8f8',titleFont:{family:'Share Tech Mono',size:10},bodyFont:{family:'Share Tech Mono',size:12},callbacks:{title:i=>i[0].label,label:i=>`  ${i.raw} experiment${i.raw!==1?'s':''}`}}},sections:{x:{ticks:{color:'rgba(58,96,112,.9)',font:{family:'Share Tech Mono',size:fs},maxRotation:45},grid:{color:'rgba(15,58,90,.4)'},border:{color:'rgba(15,58,90,.6)'}},y:{ticks:{color:'rgba(58,96,112,.9)',font:{family:'Share Tech Mono',size:fs},stepSize:1},grid:{color:'rgba(15,58,90,.4)'},border:{color:'rgba(15,58,90,.6)'},beginAtZero:true}},scales:{x:{ticks:{color:'rgba(58,96,112,.9)',font:{family:'Share Tech Mono',size:fs},maxRotation:45},grid:{color:'rgba(15,58,90,.4)'},border:{color:'rgba(15,58,90,.6)'}},y:{ticks:{color:'rgba(58,96,112,.9)',font:{family:'Share Tech Mono',size:fs},stepSize:1},grid:{color:'rgba(15,58,90,.4)'},border:{color:'rgba(15,58,90,.6)'},beginAtZero:true}}}};}
+function buildCharts(exps){['B','H','D','F'].forEach(k=>{const id='c'+k;if(chartInst[id])chartInst[id].destroy();chartInst[id]=new Chart(document.getElementById(id).getContext('2d'),makeChartCfg(countBy(exps,k),k));});}
+function showChartView(v){chartView=v;document.querySelectorAll('.chart-tab').forEach(t=>t.classList.toggle('active',t.dataset.view===v));document.getElementById('chart-all').style.display=v==='all'?'grid':'none';const sp=document.getElementById('chart-single');if(v==='all'){sp.style.display='none';return;}sp.style.display='block';const tm={B:'Baseline (m)',H:'Height (m)',D:'Depth (m)',F:'Focal Length (mm)'};document.getElementById('single-title').textContent=`▸ ${tm[v]} — Experiment Count`;const src=filtExp.length?filtExp:allExp;const id='cSingle';if(chartInst[id])chartInst[id].destroy();chartInst[id]=new Chart(document.getElementById(id).getContext('2d'),makeChartCfg(countBy(src,v),v,13));}
+
+/* ════ TABLE ════ */
+function renderTable(exps){
+  filtExp=exps;
+  document.getElementById('filter-count').textContent=`Showing ${exps.length} / ${allExp.length} experiments`;
+  const tb=document.getElementById('exp-tbody'),em=document.getElementById('empty-msg');
+  if(!exps.length){tb.innerHTML='';em.style.display='block';return;}
+  em.style.display='none';
+  const fmt=v=>v!=null?(v>=0?'+':'')+v.toFixed(2):'—';
+  tb.innerHTML=exps.map((e,i)=>{
+    const p=e.params,ei=e.expInfo,pi1=e.pi01.imu,pi2=e.pi02.imu;
+    const pi1v=ei?ei['pi01 Video']:'—',pi2v=ei?ei['pi02 Video']:'—';
+    const issue=ei&&ei.Issue?ei.Issue:'—',date=ei&&ei.Date?ei.Date:'—';
+    const vok=v=>v&&v.toLowerCase().includes('success')?`<span style="color:var(--accent2)">✓</span>`:`<span style="color:var(--dim)">–</span>`;
+    const calcH=ei?parseFloat(ei['Calculated Height']):NaN,calcD=ei?parseFloat(ei['Calculated Depth']):NaN;
+    const actH=p.H??NaN,actD=p.D??NaN;
+    const errH=(!isNaN(calcH)&&!isNaN(actH))?Math.abs(calcH-actH):NaN,errD=(!isNaN(calcD)&&!isNaN(actD))?Math.abs(calcD-actD):NaN;
+    const errPctH=(!isNaN(errH)&&actH)?errH/actH*100:NaN,errPctD=(!isNaN(errD)&&actD)?errD/actD*100:NaN;
+    const ec=pct=>isNaN(pct)?'var(--dim)':pct<10?'var(--accent2)':pct<50?'var(--accent4)':'#ff4466';
+    const fC=v=>isNaN(v)?'<span style="color:var(--dim)">—</span>':`<span style="color:var(--accent5);font-weight:bold">${v.toFixed(2)}</span><span style="color:var(--dim);font-size:9px"> m</span>`;
+    const fE=(e2,pct)=>isNaN(e2)?'<span style="color:var(--dim)">—</span>':`<span style="color:${ec(pct)};font-weight:bold">${e2.toFixed(2)}</span><span style="color:var(--dim);font-size:9px"> m</span><br><span style="color:${ec(pct)};font-size:9px">${isNaN(pct)?'':'('+pct.toFixed(1)+'%)'}</span>`;
+    return`<tr>
+      <td class="exp-num">${String(i+1).padStart(2,'0')}</td>
+      <td><div style="color:#fff;letter-spacing:1px">${e.expName}</div><div style="font-size:10px;color:var(--dim);margin-top:2px">${ei?ei['EXP Name']||'':''}</div></td>
+      <td><span class="param-badge B">B=${p.B??'?'}</span><span class="param-badge H">H=${p.H??'?'}</span><span class="param-badge D">D=${p.D??'?'}</span><span class="param-badge F">F=${p.F??'?'}</span></td>
+      <td style="font-size:11px;color:var(--accent2)">${pi1?`Y:${fmt(pi1.yaw)}° P:${fmt(pi1.pitch)}°`:'<span style="color:var(--dim)">N/A</span>'}</td>
+      <td style="font-size:11px;color:var(--accent3)">${pi2?`Y:${fmt(pi2.yaw)}° P:${fmt(pi2.pitch)}°`:'<span style="color:var(--dim)">N/A</span>'}</td>
+      <td style="font-size:11px">${fC(calcH)}</td><td style="font-size:11px">${fC(calcD)}</td>
+      <td style="font-size:11px;line-height:1.5">${fE(errH,errPctH)}</td>
+      <td style="font-size:11px;line-height:1.5">${fE(errD,errPctD)}</td>
+      <td style="font-size:11px">${vok(pi1v)} Pi01 &nbsp;${vok(pi2v)} Pi02</td>
+      <td style="font-size:11px;color:${issue==='—'||issue.toLowerCase()==='none'?'var(--dim)':'var(--accent4)'}">${issue}</td>
+      <td style="font-size:11px;color:var(--dim)">${date}</td>
+      <td><button class="btn" onclick="openDet(${allExp.indexOf(e)})" style="font-size:9px;padding:6px 12px;letter-spacing:2px"><span>▶ DETECT</span></button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════ FILTERS ════ */
+function applyFilters(){
+  const gv=id=>parseFloat(document.getElementById(id).value);
+  const bMin=gv('flt-b-min'),bMax=gv('flt-b-max'),hMin=gv('flt-h-min'),hMax=gv('flt-h-max'),dMin=gv('flt-d-min'),dMax=gv('flt-d-max'),fMin=gv('flt-f-min'),fMax=gv('flt-f-max');
+  const s=document.getElementById('flt-search').value.toLowerCase();
+  const f=allExp.filter(e=>{
+    const p=e.params;
+    if(!isNaN(bMin)&&p.B!=null&&p.B<bMin)return false;if(!isNaN(bMax)&&p.B!=null&&p.B>bMax)return false;
+    if(!isNaN(hMin)&&p.H!=null&&p.H<hMin)return false;if(!isNaN(hMax)&&p.H!=null&&p.H>hMax)return false;
+    if(!isNaN(dMin)&&p.D!=null&&p.D<dMin)return false;if(!isNaN(dMax)&&p.D!=null&&p.D>dMax)return false;
+    if(!isNaN(fMin)&&p.F!=null&&p.F<fMin)return false;if(!isNaN(fMax)&&p.F!=null&&p.F>fMax)return false;
+    if(s){const hay=(e.expName+' '+(e.expInfo?e.expInfo['EXP Name']||'':'')+' '+cfgName(p)).toLowerCase();if(!hay.includes(s))return false;}
+    return true;
+  });
+  renderTable(f);
+  if(chartView!=='all'){if(chartInst['cSingle'])chartInst['cSingle'].destroy();chartInst['cSingle']=new Chart(document.getElementById('cSingle').getContext('2d'),makeChartCfg(countBy(f,chartView),chartView,13));}
+}
+function clearFilters(){['flt-b-min','flt-b-max','flt-h-min','flt-h-max','flt-d-min','flt-d-max','flt-f-min','flt-f-max'].forEach(id=>document.getElementById(id).value='');document.getElementById('flt-search').value='';applyFilters();}
+
+/* ════ OPEN DETECT ════ */
+function openDet(idx){
+  curExp=allExp[idx];const e=curExp,p=e.params,ei=e.expInfo;
+  document.getElementById('page-main').classList.remove('active');
+  document.getElementById('page-detect').classList.add('active');
+  window.scrollTo(0,0);
+  const name=ei?ei['EXP Name']||cfgName(p):cfgName(p);
+  document.getElementById('det-title').innerHTML=`${e.expName} <span>— ${name}</span>`;
+  document.getElementById('det-subtitle').textContent=`B=${p.B??'?'}m  H=${p.H??'?'}m  D=${p.D??'?'}m  F=${p.F??'?'}mm`;
+  if(ei){
+    const grid=document.getElementById('expinfo-grid');
+    const flds=[['EXP Number',ei['EXP Number'],''],['EXP Name',ei['EXP Name'],''],['Baseline',ei.Baseline,''],['Height',ei.Height,''],['Depth',ei.Depth,''],['Focal Length',ei['Focal Length'],''],['Pi01 Video',ei['pi01 Video'],ei['pi01 Video']?.toLowerCase().includes('success')?'ok':'warn'],['Pi02 Video',ei['pi02 Video'],ei['pi02 Video']?.toLowerCase().includes('success')?'ok':'warn'],['Pi01 IMU',ei['pi01 IMU Signal'],''],['Pi02 IMU',ei['pi02 IMU Signal'],''],['Pi01 GPS',ei['pi01 GPS Signal'],''],['Pi02 GPS',ei['pi02 GPS Signal'],''],['Drone Model',ei['Drone Model'],''],['Issue',ei.Issue||ei.issue||'None',''],['Date',ei.Date,''],['Drone Location',ei['Drone Location'],''],['Calculated Location',ei['Calculated Drone Location'],''],['Calc Height',ei['Calculated Height'],''],['Calc Depth',ei['Calculated Depth'],'']].filter(([,v])=>v!=null&&v!=='');
+    grid.innerHTML=flds.map(([k,v,c])=>`<div class="info-cell"><div class="info-cell-label">${k}</div><div class="info-cell-val ${c}">${v}</div></div>`).join('');
+    document.getElementById('expinfo-panel').style.display='block';
+    const cH=parseFloat(ei['Calculated Height']),cD=parseFloat(ei['Calculated Depth']);
+    if(!isNaN(cH))document.getElementById('det-h').value=cH.toFixed(3);
+    if(!isNaN(cD))document.getElementById('det-z').value=cD.toFixed(3);
+    const cl2=(ei['Calculated Drone Location']||'').replace(/[m ASL°]/g,'').split(',').map(s=>s.trim());
+    if(cl2.length>=2){const la=parseFloat(cl2[0]),lo=parseFloat(cl2[1]);if(!isNaN(la))document.getElementById('det-lat').value=la.toFixed(7);if(!isNaN(lo))document.getElementById('det-lon').value=lo.toFixed(7);}
+    const ce=(ei['Center']||'').replace(/[m ASL°]/g,'').split(',').map(s=>s.trim());
+    if(ce.length>=2){const la=parseFloat(ce[0]),lo=parseFloat(ce[1]),al=parseFloat(ce[2]);if(!isNaN(la))document.getElementById('gps-lat').value=la.toFixed(7);if(!isNaN(lo))document.getElementById('gps-lon').value=lo.toFixed(7);if(!isNaN(al))document.getElementById('gps-alt').value=al.toFixed(1);}
+    document.getElementById('det-banner').style.display='flex';
+    document.getElementById('det-coords').textContent=!isNaN(cH)&&!isNaN(cD)?`H=${cH.toFixed(2)}m  D=${cD.toFixed(2)}m`:'';
+  }else{
+    document.getElementById('expinfo-panel').style.display='none';
+    document.getElementById('det-banner').style.display='none';
+    ['det-h','det-z','det-lat','det-lon'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('det-x').value='0';
+  }
+  const pi1=e.pi01.imu,pi2=e.pi02.imu,fmt=v=>v!=null?(v>=0?'+':'')+v.toFixed(3):'—';
+  document.getElementById('cfg-B').textContent=p.B??'—';document.getElementById('cfg-H').textContent=p.H??'—';document.getElementById('cfg-D').textContent=p.D??'—';document.getElementById('cfg-F').textContent=p.F??'—';
+  document.getElementById('cfg-pi1-yaw').textContent=pi1?fmt(pi1.yaw):'—';document.getElementById('cfg-pi1-pitch').textContent=pi1?fmt(pi1.pitch):'—';
+  document.getElementById('cfg-pi2-yaw').textContent=pi2?fmt(pi2.yaw):'—';document.getElementById('cfg-pi2-pitch').textContent=pi2?fmt(pi2.pitch):'—';
+  function setIMU(pre,imu){if(!imu){['yaw','pitch','roll','range'].forEach(k=>document.getElementById(`${pre}_${k}`).textContent='—');return;}document.getElementById(`${pre}_yaw`).textContent=fmt(imu.yaw);document.getElementById(`${pre}_pitch`).textContent=fmt(imu.pitch);document.getElementById(`${pre}_roll`).textContent=fmt(imu.roll);if(p.H!=null&&p.D!=null){const B=p.B??1,cx=pre==='L'?-B/2:B/2,dx=0-cx;document.getElementById(`${pre}_range`).textContent=Math.sqrt(dx*dx+p.H*p.H+p.D*p.D).toFixed(3);}else document.getElementById(`${pre}_range`).textContent='—';}
+  setIMU('L',pi1);setIMU('R',pi2);
+
+  /* Videos from GitHub raw URLs */
+  function loadVid(url,vid,none){
+    const ve=document.getElementById(vid),ne=document.getElementById(none);
+    if(url){ve.src=url;ve.style.display='block';ne.style.display='none';ve.load();
+      ve.onerror=()=>{ve.style.display='none';ne.style.display='flex';ne.innerHTML='<span style="color:#ff4466;font-size:11px">Stream unavailable</span><a href="'+url+'" target="_blank" style="color:var(--accent);font-size:10px;letter-spacing:1px;margin-top:4px">↗ Open raw file</a>';};}
+    else{ve.src='';ve.style.display='none';ne.style.display='flex';ne.textContent='NO VIDEO FILE';}
+  }
+  loadVid(e.pi01.vidUrl,'vL','vL-none');loadVid(e.pi02.vidUrl,'vR','vR-none');
+  loadVid(e.pi01.detVidUrl,'vDL','vDL-none');loadVid(e.pi02.detVidUrl,'vDR','vDR-none');
+  calcGPS();drawViz2();
+}
+function goBack(){document.getElementById('page-detect').classList.remove('active');document.getElementById('page-main').classList.add('active');window.scrollTo(0,0);}
+function onDetChange(){drawViz2();calcGPS();}
+
+/* ════ GPS MATH ════ */
+function offLL(la,lo,n,e2){return{lat:la+(n/RE)*DEG,lon:lo+(e2/(RE*Math.cos(la*RAD)))*DEG};}
+function b2NE(b,d){const r=b*RAD;return[d*Math.cos(r),d*Math.sin(r)];}
+function calcGPS(){
+  if(!curExp)return;
+  const lat=parseFloat(document.getElementById('gps-lat').value),lon=parseFloat(document.getElementById('gps-lon').value),alt=parseFloat(document.getElementById('gps-alt').value),hdg=parseFloat(document.getElementById('gps-heading').value)||0;
+  const err=document.getElementById('gps-error');
+  if(isNaN(lat)||isNaN(lon)||isNaN(alt)){err.style.display='block';err.textContent='⚠ Enter valid GPS.';return;}
+  err.style.display='none';
+  const p=curExp.params,B=p.B??1,H=p.H??0,Z=p.D??0;
+  const cl=offLL(lat,lon,...b2NE(hdg-90,B/2)),cr=offLL(lat,lon,...b2NE(hdg+90,B/2));
+  const dr=offLL(lat,lon,...b2NE(hdg,Z));
+  const dH=parseFloat(document.getElementById('det-h').value)||0,dZ=parseFloat(document.getElementById('det-z').value)||0,dX=parseFloat(document.getElementById('det-x').value)||0;
+  const dlat=parseFloat(document.getElementById('det-lat').value),dlon=parseFloat(document.getElementById('det-lon').value);
+  let det;
+  if(!isNaN(dlat)&&!isNaN(dlon)){det={lat:dlat,lon:dlon,alt:alt+dH};}
+  else{const df=b2NE(hdg,dZ),dl=b2NE(hdg+90,dX);const dp=offLL(lat,lon,df[0]+dl[0],df[1]+dl[1]);det={lat:dp.lat,lon:dp.lon,alt:alt+dH};}
+  function sl(pre,o){document.getElementById(pre+'-lat').textContent=o.lat.toFixed(7)+'°';document.getElementById(pre+'-lon').textContent=o.lon.toFixed(7)+'°';document.getElementById(pre+'-alt').textContent=o.alt.toFixed(1)+' m ASL';document.getElementById(pre+'-gmaps').href=`https://www.google.com/maps?q=${o.lat.toFixed(7)},${o.lon.toFixed(7)}`;}
+  sl('cl',{...cl,alt});sl('cr',{...cr,alt});sl('dr',{...dr,alt:alt+H});sl('dd',det);
+  document.getElementById('gmaps-all').href=`https://www.google.com/maps/dir/${cl.lat.toFixed(7)},${cl.lon.toFixed(7)}/${dr.lat.toFixed(7)},${dr.lon.toFixed(7)}/${cr.lat.toFixed(7)},${cr.lon.toFixed(7)}`;
+  updMap({lat:cl.lat,lon:cl.lon,alt},{lat:cr.lat,lon:cr.lon,alt},{lat:dr.lat,lon:dr.lon,alt:alt+H},det);
+}
+
+/* ════ MAP ════ */
+function mkIcon(c,lbl){return L.divIcon({className:'',html:`<div style="width:14px;height:14px;border-radius:50%;background:${c};border:2px solid #fff;box-shadow:0 0 8px ${c}"></div><div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(5,10,15,.85);color:${c};font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 6px;border:1px solid ${c};border-radius:2px;white-space:nowrap;letter-spacing:1px">${lbl}</div>`,iconSize:[14,14],iconAnchor:[7,7],popupAnchor:[0,-12]});}
+function updMap(cl,cr,dr,det){
+  if(!lmap){lmap=L.map('leaflet-map2',{zoomControl:true}).setView([cl.lat,cl.lon],18);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:22}).addTo(lmap);}
+  Object.values(mlayers).forEach(l=>{try{lmap.removeLayer(l);}catch(e){}});
+  mlayers.bl=L.polyline([[cl.lat,cl.lon],[cr.lat,cr.lon]],{color:'#00ff88',weight:3,opacity:.8}).addTo(lmap);
+  mlayers.lL=L.polyline([[cl.lat,cl.lon],[dr.lat,dr.lon]],{color:'#00d4ff',weight:1.5,opacity:.7,dashArray:'8 5'}).addTo(lmap);
+  mlayers.lR=L.polyline([[cr.lat,cr.lon],[dr.lat,dr.lon]],{color:'#ff6b35',weight:1.5,opacity:.7,dashArray:'8 5'}).addTo(lmap);
+  mlayers.dL=L.polyline([[cl.lat,cl.lon],[det.lat,det.lon]],{color:'#fc00ff',weight:1.5,opacity:.6,dashArray:'4 6'}).addTo(lmap);
+  mlayers.dR=L.polyline([[cr.lat,cr.lon],[det.lat,det.lon]],{color:'#fc00ff',weight:1.5,opacity:.6,dashArray:'4 6'}).addTo(lmap);
+  mlayers.el=L.polyline([[dr.lat,dr.lon],[det.lat,det.lon]],{color:'#fff',weight:1,opacity:.35,dashArray:'3 3'}).addTo(lmap);
+  mlayers.cL=L.marker([cl.lat,cl.lon],{icon:mkIcon('#00d4ff','CAM L')}).addTo(lmap).bindPopup(`<b style="color:#00d4ff">Camera Left</b><br>Lat:${cl.lat.toFixed(7)}<br>Lon:${cl.lon.toFixed(7)}`);
+  mlayers.cR=L.marker([cr.lat,cr.lon],{icon:mkIcon('#ff6b35','CAM R')}).addTo(lmap).bindPopup(`<b style="color:#ff6b35">Camera Right</b><br>Lat:${cr.lat.toFixed(7)}<br>Lon:${cr.lon.toFixed(7)}`);
+  mlayers.dr=L.marker([dr.lat,dr.lon],{icon:mkIcon('#ffd700','DRONE')}).addTo(lmap).bindPopup(`<b style="color:#ffd700">Original Drone</b><br>Lat:${dr.lat.toFixed(7)}<br>Lon:${dr.lon.toFixed(7)}<br>Alt:${dr.alt.toFixed(1)}m`);
+  mlayers.dd=L.marker([det.lat,det.lon],{icon:mkIcon('#fc00ff','DETECTED')}).addTo(lmap).bindPopup(`<b style="color:#fc00ff">Detected Drone</b><br>Lat:${det.lat.toFixed(7)}<br>Lon:${det.lon.toFixed(7)}<br>Alt:${det.alt.toFixed(1)}m`);
+  lmap.fitBounds([[cl.lat,cl.lon],[cr.lat,cr.lon],[dr.lat,dr.lon],[det.lat,det.lon]],{padding:[40,40]});
+}
+
+/* ════ GEOMETRY VIZ ════ */
+function drawViz2(){
+  if(!curExp)return;
+  const canvas=document.getElementById('viz2'),ctx=canvas.getContext('2d');
+  const rect=canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;
+  const dpr=window.devicePixelRatio||1;canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.scale(dpr,dpr);
+  const W=rect.width,H=rect.height;ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,212,255,.04)';ctx.lineWidth=1;for(let x=0;x<W;x+=30){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  const p=curExp.params,B=p.B??1,oH=p.H??0,oZ=p.D??0;
+  const dH=parseFloat(document.getElementById('det-h').value),dZ=parseFloat(document.getElementById('det-z').value),dX=parseFloat(document.getElementById('det-x').value)||0;
+  const hasDet=!isNaN(dH)&&!isNaN(dZ);
+  const PL=52,PR=52,PT=40,PB=60,pW=W-PL-PR,pH=H-PT-PB;
+  const allX=[-B/2,B/2,0];if(hasDet)allX.push(dX);
+  const allY=[oH,oZ];if(hasDet){allY.push(dH);allY.push(dZ);}
+  const xMin=Math.min(...allX)-B*.8,xMax=Math.max(...allX)+B*.8,xSp=(xMax-xMin)||1,yMax=Math.max(...allY,1)*1.3;
+  const sx=wx=>PL+((wx-xMin)/xSp)*pW,sy=wy=>PT+pH-(wy/yMax)*pH;
+  const lx=sx(-B/2),ly=sy(0),rx=sx(B/2),ry=sy(0),ox=sx(0),oy=sy(oH),ddx=hasDet?sx(dX):0,ddy=hasDet?sy(dH):0;
+  const fs=Math.max(9,Math.min(11,W*.018));
+  ctx.strokeStyle='rgba(0,212,255,.12)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PL,ly);ctx.lineTo(PL+pW,ly);ctx.stroke();
+  ctx.font=`${fs}px Share Tech Mono`;ctx.fillStyle='rgba(0,212,255,.3)';ctx.textAlign='right';
+  for(let i=0;i<=5;i++){const yv=(yMax/5)*i;ctx.strokeStyle='rgba(0,212,255,.06)';ctx.beginPath();ctx.moveTo(PL,sy(yv));ctx.lineTo(PL+pW,sy(yv));ctx.stroke();ctx.fillText(yv.toFixed(0)+'m',PL-5,sy(yv)+3);}
+  if(hasDet){ctx.strokeStyle='rgba(255,255,255,.2)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ddx,ddy);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(255,255,255,.35)';ctx.textAlign='center';ctx.font=`${fs-1}px Share Tech Mono`;ctx.fillText(`ΔH=${Math.abs(dH-oH).toFixed(2)}m  ΔZ=${Math.abs(dZ-oZ).toFixed(2)}m`,(ox+ddx)/2,(oy+ddy)/2-8);}
+  ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(ox,ly);ctx.lineTo(ox,oy);ctx.stroke();if(hasDet){ctx.beginPath();ctx.moveTo(ddx,ly);ctx.lineTo(ddx,ddy);ctx.stroke();}ctx.setLineDash([]);
+  function sl(x1,y1,x2,y2,c){const g=ctx.createLinearGradient(x1,y1,x2,y2);g.addColorStop(0,c);g.addColorStop(1,c.replace(/[\d.]+\)$/,'.1)'));ctx.strokeStyle=g;ctx.lineWidth=1.8;ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);}
+  sl(lx,ly,ox,oy,'rgba(0,212,255,.9)');sl(rx,ry,ox,oy,'rgba(255,107,53,.9)');
+  if(hasDet){sl(lx,ly,ddx,ddy,'rgba(252,0,255,.7)');sl(rx,ry,ddx,ddy,'rgba(252,0,255,.7)');}
+  ctx.strokeStyle='rgba(0,255,136,.5)';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(rx,ry);ctx.stroke();ctx.fillStyle='rgba(0,255,136,.8)';ctx.textAlign='center';ctx.font=`${fs}px Share Tech Mono`;ctx.fillText(`B=${B}m`,(lx+rx)/2,ly+16);
+  const dCam=(x,y,c,lbl)=>{ctx.fillStyle=c;ctx.shadowColor=c;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle=c;ctx.font=`bold ${fs}px Share Tech Mono`;ctx.textAlign='center';ctx.fillText(lbl,x,y+24);};
+  dCam(lx,ly,'#00d4ff','CAM L');dCam(rx,ry,'#ff6b35','CAM R');
+  const ds=Math.max(7,Math.min(11,W*.018));
+  const dCross=(x,y,c)=>{ctx.strokeStyle=c;ctx.lineWidth=2.5;ctx.shadowColor=c;ctx.shadowBlur=16;ctx.beginPath();ctx.moveTo(x-ds,y-ds);ctx.lineTo(x+ds,y+ds);ctx.stroke();ctx.beginPath();ctx.moveTo(x+ds,y-ds);ctx.lineTo(x-ds,y+ds);ctx.stroke();[[x-ds,y-ds],[x+ds,y-ds],[x-ds,y+ds],[x+ds,y+ds]].forEach(([px,py])=>{ctx.fillStyle=c.replace(/\)$/,'.5)').replace('rgb','rgba');ctx.beginPath();ctx.arc(px,py,3,0,Math.PI*2);ctx.fill();});ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;};
+  dCross(ox,oy,'#fff');ctx.fillStyle='#fff';ctx.font=`bold ${fs}px Share Tech Mono`;ctx.textAlign='center';ctx.fillText('⊕ ORIGINAL',ox,oy-ds-8);ctx.font=`${fs-1}px Share Tech Mono`;ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText(`H=${oH}m  Z=${oZ}m`,ox,oy-ds-19);
+  if(hasDet){dCross(ddx,ddy,'#fc00ff');ctx.fillStyle='#fc00ff';ctx.font=`bold ${fs}px Share Tech Mono`;ctx.textAlign='center';ctx.fillText('⊕ DETECTED',ddx,ddy-ds-8);ctx.font=`${fs-1}px Share Tech Mono`;ctx.fillStyle='rgba(252,0,255,.6)';ctx.fillText(`H=${dH.toFixed(1)}m  Z=${dZ.toFixed(1)}m`,ddx,ddy-ds-19);}
+  ctx.fillStyle='rgba(255,255,255,.15)';ctx.font=`${Math.max(8,fs-2)}px Share Tech Mono`;ctx.textAlign='left';ctx.fillText('SIDE VIEW — HEIGHT vs LATERAL (X)',PL,PT-10);
+}
+const ro=new ResizeObserver(()=>{if(curExp)drawViz2();});ro.observe(document.getElementById('viz2'));
+
+window.addEventListener('DOMContentLoaded', initLoad);
+</script>
+</body>
+</html>
